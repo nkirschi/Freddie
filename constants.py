@@ -33,6 +33,16 @@ COLS_SINGLE = [
     "VABS", "D",
     "COSALPHA"
 ]
+FLUX_COLS = COLS_3D[3]
+
+# class name mapping
+LABEL_NAMES = {
+    0: "interplanetary magnetic field",
+    1: "bow shock crossing",
+    2: "magnetosheath",
+    3: "magnetopause crossing",
+    4: "magnetosphere"
+}
 
 # event columns in label file
 EVENT_COLS = list(range(1, 9))
