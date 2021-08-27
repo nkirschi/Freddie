@@ -1,38 +1,86 @@
 import torch
 import pandas as pd
+import utils
 
 from constants import *
 from torch.utils.data import Dataset
 
-# TODO write documentation
+
 class MessengerDataset(Dataset):
+    """
+    The MESSENGER dataset, cut into fixed-length time windows.
+    """
 
     # TODO add parameters for 3D and 1D feature column names
-    def __init__(self, orbits_path, window_size=8, normalize=True):
+    def __init__(self, orbits_path, *, window_size=8, normalize=True):
+        """
+        Loads the MESSENGER dataset from orbits_path and configures it according to the parameters.
+
+        Parameters
+        ----------
+        orbits_path : str
+            The path to the folder containing all MESSENGER orbit data.
+        window_size : int, default 8
+            The size each window shall have.
+        normalize : bool, default True
+            Whether to normalize the features.
+        """
+
         self.data = pd.read_csv(orbits_path)
         self.window_size = window_size
-        self.orbit_ids = self.data[ORBIT_COL].unique()
-        self.max_num_windows = self.data.groupby(ORBIT_COL).size().min() - (window_size - 1)
+        self.skip_size = window_size - 1
 
-        if normalize:  # TODO maybe extract special normalization into utils file
+        orbit_sizes = self.data.groupby(ORBIT_COL).size()
+        self.cum_window_nums = (orbit_sizes - self.skip_size).cumsum()
+
+        if normalize:
             for feat_3d in COLS_3D:
-                centered = self.data[feat_3d] - self.data[feat_3d].mean()
-                distdev = (centered ** 2).sum(axis=1).mean() ** 0.5
-                self.data[feat_3d] = centered / distdev
-            single = self.data[COLS_SINGLE]
-            self.data[COLS_SINGLE] = (single - single.mean()) / single.std()
+                utils.normalize_coupled(self.data, feat_3d)
+            utils.normalize_decoupled(self.data, COLS_SINGLE)
 
     def __len__(self):
-        return len(self.orbit_ids) * self.max_num_windows
+        """
+        Yields the size of the dataset.
+
+        Returns
+        -------
+        int
+            The total number of windows.
+        """
+
+        return self.cum_window_nums.iloc[-1]
 
     def __getitem__(self, idx):
-        o_idx, w_idx = divmod(idx, self.max_num_windows)
+        """
+        Retrieves the window the given index and its corresponding label.
 
-        orbit = self.data[self.data[ORBIT_COL] == self.orbit_ids[o_idx]]
-        window = orbit.iloc[w_idx: (w_idx + self.window_size)]
+        Parameters
+        ----------
+        idx
+            The index of the desired window.
+
+        Returns
+        -------
+        sample : bool
+            The requested window as float tensor.
+        label : int
+            The corresponding label between 0 and 4.
+
+        Raises
+        ------
+        IndexError
+            If idx is negative or larger than the dataset size.
+        """
+
+        if idx < 0 or idx >= len(self):
+            raise IndexError(f"Index {idx} is out of bounds.")
+
+        orbit_skips = (self.cum_window_nums <= idx).sum()
+        pos = idx + orbit_skips * self.skip_size
+        window = self.data.iloc[pos:(pos + self.window_size)]
 
         feats_3d = [torch.tensor(window[feat].values) for feat in COLS_3D]
         sample = torch.stack(feats_3d, dim=1)  # window_size x #feats_3d x 3
-        label = torch.tensor(list(window[LABEL_COL]))  # list of ordinal labels
+        label = torch.tensor(window[LABEL_COL].values)  # list of ordinal labels
 
         return sample, label
