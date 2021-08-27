@@ -2,26 +2,33 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
+from matplotlib.dates import DateFormatter
 
-def configure_latex_rendering():
-    # mpl.use("pgf")
-    mpl.rcParams.update({
-        "pgf.texsystem": "pdflatex",
-        "font.family": "serif",
-        "text.usetex": True,
-        "pgf.rcfonts": False
-    })
+LINEWIDTH = 0.25  # default plot linewidth
+
+# update settings for LaTeX exporting
+mpl.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    "font.family": "serif",
+    "text.usetex": True,
+    "pgf.rcfonts": False
+})
 
 
-def plot_components_and_norm(X, Y, Z, *, varname):
-    plt.figure()
+def plot_components_and_norm(x, Y, *, symbol, vlines=(), outfile=None):
+    plt.gca().xaxis.set_major_formatter(DateFormatter("%H\\mathord{:}%M"))
 
-    plt.plot(X, linewidth=0.25, label=f"${varname}_1$")
-    plt.plot(Y, linewidth=0.25, label=f"${varname}_2$")
-    plt.plot(Z, linewidth=0.25, label=f"${varname}_3$")
+    for (i, y) in enumerate(Y):
+        plt.plot(x, y, linewidth=LINEWIDTH, label=f"${symbol}_{i + 1}$")
 
-    N = np.linalg.norm(np.array([X, Y, Z]), axis=0)
-    p = plt.plot(N, linewidth=0.25, label=f"$\\pm||\\vec{{{varname}}}||$")
-    plt.plot(-N, linewidth=0.25, color=p[-1].get_color())
+    n = np.linalg.norm(np.array(Y), axis=0)
+    p = plt.plot(x, n, linewidth=LINEWIDTH, label=f"$\\pm||\\vec{{{symbol}}}||$")
+    plt.plot(x, -n, linewidth=LINEWIDTH, color=p[-1].get_color())
+
+    for x in vlines:
+        plt.axvline(x, linewidth=LINEWIDTH, color="black")
 
     plt.legend()
+
+    if outfile:
+        plt.savefig(outfile)
