@@ -68,6 +68,7 @@ COLS_SINGLE = [
     "COSALPHA"
 ]
 FLUX_COLS = COLS_3D[3]
+USED_COLS = [DATE_COL, ORBIT_COL, LABEL_COL] + COLS_SINGLE + sum(COLS_3D, [])
 
 # class name mapping
 LABEL_NAMES = {
