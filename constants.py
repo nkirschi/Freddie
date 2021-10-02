@@ -21,25 +21,25 @@ EVENT_COLS = list(range(1, 9))
 
 # relevant feature column names
 COLS_3D = [
-    ["X", "Y", "Z"],
-    ["VX", "VY", "VZ"],
-    ["X_MSO", "Y_MSO", "Z_MSO"],
     ["BX_MSO", "BY_MSO", "BZ_MSO"],
-    ["DBX_MSO", "DBY_MSO", "DBZ_MSO"],
-    ["BX_DIPOLE", "BY_DIPOLE", "BZ_DIPOLE"],
+    ["X_MSO", "Y_MSO", "Z_MSO"],
+    #["X", "Y", "Z"],
+    #["VX", "VY", "VZ"],
+    #["DBX_MSO", "DBY_MSO", "DBZ_MSO"],
+    #["BX_DIPOLE", "BY_DIPOLE", "BZ_DIPOLE"],
 ]
 COLS_SINGLE = [
-    "RHO_DIPOLE",
-    "PHI_DIPOLE",
-    "THETA_DIPOLE",
-    "BABS_DIPOLE",
-    "RHO", "RXY",
-    "VABS", "D",
-    "COSALPHA"
+    #"RHO_DIPOLE",
+    #"PHI_DIPOLE",
+    #"THETA_DIPOLE",
+    #"BABS_DIPOLE",
+    #"RHO", "RXY",
+    #"VABS", "D",
+    #"COSALPHA"
 ]
-FLUX_COLS = COLS_3D[3]
-PRED_COLS = COLS_SINGLE + sum(COLS_3D, [])
-USED_COLS = [DATE_COL, ORBIT_COL, LABEL_COL] + PRED_COLS
+FLUX_COLS = COLS_3D[0]
+PRED_COLS = [DATE_COL] + COLS_SINGLE + sum(COLS_3D, [])
+USED_COLS = [ORBIT_COL, LABEL_COL] + PRED_COLS
 
 # class name mapping
 CLASSES = {
