@@ -124,8 +124,8 @@ class MessengerDataset(Dataset):
 
         # split on the orbit level
         split_idx = int(holdout_ratio * len(orbits))
-        train_orbits = orbits[:split_idx].tolist()
-        test_orbits = orbits[split_idx:].tolist()
+        train_orbits = orbits[split_idx:].tolist()
+        test_orbits = orbits[:split_idx].tolist()
 
         # split on the index level
         orbit_range = lambda o: range(cwn.iloc[o - 1] if o > 0 else 0, cwn.iloc[o])
