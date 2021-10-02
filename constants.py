@@ -1,8 +1,9 @@
 # relevant directories
-LABEL_DIR = "labels"   # where the label mapping is located
-ORBIT_DIR = "orbits"   # where the orbit data is located
-MERGED_DIR = "merged"  # where the final training data resides
-FIGURE_DIR = "figures"
+LABEL_DIR = "labels"    # where the label mapping is located
+ORBIT_DIR = "orbits"    # where the orbit data is located
+DATA_DIR = "data"   # where the final training data resides
+FIGURE_DIR = "figures"  # where figures are saved
+MODELS_DIR = "models"   # where the trained models reside
 
 # important file names
 MESSENGER = lambda n: f"messenger-{n:04d}"
@@ -15,39 +16,8 @@ DATE_COL = "DATE"
 ORBIT_COL = "ORBIT"
 LABEL_COL = "LABEL"
 
-# memory data types for learning
-DTYPES = {
-    "X_MSO": "float32",
-    "Y_MSO": "float32",
-    "Z_MSO": "float32",
-    "BX_MSO": "float32",
-    "BY_MSO": "float32",
-    "BZ_MSO": "float32",
-    "DBX_MSO": "float32",
-    "DBY_MSO": "float32",
-    "DBZ_MSO": "float32",
-    "RHO_DIPOLE": "float32",
-    "PHI_DIPOLE": "float32",
-    "THETA_DIPOLE": "float32",
-    "BABS_DIPOLE": "float32",
-    "BX_DIPOLE": "float32",
-    "BY_DIPOLE": "float32",
-    "BZ_DIPOLE": "float32",
-    "RHO": "float32",
-    "RXY": "float32",
-    "X": "float32",
-    "Y": "float32",
-    "Z": "float32",
-    "VX": "float32",
-    "VY": "float32",
-    "VZ": "float32",
-    "VABS": "float32",
-    "D": "float32",
-    "COSALPHA": "float32",
-    "EXTREMA": "int8",
-    "ORBIT": "int16",
-    "LABEL": "int8"
-}
+# event columns in label file
+EVENT_COLS = list(range(1, 9))
 
 # relevant feature column names
 COLS_3D = [
@@ -68,16 +38,14 @@ COLS_SINGLE = [
     "COSALPHA"
 ]
 FLUX_COLS = COLS_3D[3]
-USED_COLS = [DATE_COL, ORBIT_COL, LABEL_COL] + COLS_SINGLE + sum(COLS_3D, [])
+PRED_COLS = COLS_SINGLE + sum(COLS_3D, [])
+USED_COLS = [DATE_COL, ORBIT_COL, LABEL_COL] + PRED_COLS
 
 # class name mapping
-LABEL_NAMES = {
+CLASSES = {
     0: "interplanetary magnetic field",
     1: "bow shock crossing",
     2: "magnetosheath",
     3: "magnetopause crossing",
     4: "magnetosphere"
 }
-
-# event columns in label file
-EVENT_COLS = list(range(1, 9))
