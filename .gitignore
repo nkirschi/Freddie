@@ -3,3 +3,4 @@ archives/
 figures/
 data/
 orbits/
+*.egg-info/
