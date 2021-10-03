@@ -1,6 +1,7 @@
 .idea/
 archives/
-figures/
 data/
+figures/
+labels/
 orbits/
 *.egg-info/
