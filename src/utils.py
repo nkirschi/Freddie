@@ -38,4 +38,4 @@ def is_model_on_gpu(model):
 
 
 def resolve_path(*paths):
-    return str(Path(__file__).parent.joinpath(*paths).absolute())
+    return str(Path(__file__).parent.parent.joinpath(*paths).absolute())
