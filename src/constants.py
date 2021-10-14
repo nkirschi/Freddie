@@ -1,9 +1,9 @@
-# relevant directories
-LABEL_DIR = "../labels"  # where the label mapping is located
-ORBIT_DIR = "../orbits"  # where the orbit data is located
-DATA_DIR = "../data"  # where the final training data resides
-FIGURE_DIR = "../figures"  # where figures are saved
-MODELS_DIR = "../models"  # where the trained models reside
+# relevant directories !relative to project root!
+LABEL_DIR = "labels"    # where the label mapping is located
+ORBIT_DIR = "orbits"    # where the orbit data is located
+DATA_DIR = "data"       # where the final training data resides
+FIGURE_DIR = "figures"  # where figures are saved
+MODELS_DIR = "models"   # where the trained models reside
 
 # important file names
 MESSENGER = lambda n: f"messenger-{n:04d}"
