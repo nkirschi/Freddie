@@ -1,3 +1,11 @@
+import random
+import os
+import numpy as np
+import torch
+
+from pathlib import Path
+
+
 def normalize_decoupled(data, cols):
     data[cols] = (data[cols] - data[cols].mean()) / data[cols].std()
 
@@ -10,11 +18,6 @@ def normalize_coupled(data, cols):
 
 # see https://gist.github.com/ihoromi4/b681a9088f348942b01711f251e5f964
 def apply_global_seed(seed: int):
-    import random
-    import os
-    import numpy as np
-    import torch
-
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
 
@@ -35,6 +38,4 @@ def is_model_on_gpu(model):
 
 
 def resolve_path(*paths):
-    from pathlib import Path
-
-    return Path(__file__).parent.joinpath(*paths).absolute()
+    return str(Path(__file__).parent.joinpath(*paths).absolute())
