@@ -12,11 +12,24 @@ mpl.rcParams.update({
     "text.usetex": True,
     "pgf.texsystem": "pdflatex",
     "font.family": "serif",
+    "font.size": 12,
+    "figure.autolayout": True,
     "text.latex.preamble": "\n".join([
         r"\usepackage{palatino}",
         r"\usepackage{siunitx}",
     ])
 })
+
+
+def plot_metrics(metric, ylabel=None, outfile=None):
+    plt.figure(figsize=(4, 3))
+    plt.plot(range(1, len(metric) + 1), metric)
+    plt.grid(linestyle="--")
+    plt.xlabel("Epoch")
+    plt.ylabel(ylabel)
+
+    if outfile:
+        plt.savefig(outfile, dpi=300)
 
 
 def plot_components_and_norm(x, Y, *, symbol, vlines=(), title=None, xlabel=None, ylabel=None, outfile=None):
@@ -34,7 +47,7 @@ def plot_components_and_norm(x, Y, *, symbol, vlines=(), title=None, xlabel=None
     for i, x in enumerate(vlines[:-1]):
         plt.axvspan(x, vlines[i + 1], alpha=0.5, facecolor=next(c), edgecolor="black", linewidth=0)
 
-    plt.grid(linewidth=LINEWIDTH)
+    plt.grid(linewidth=LINEWIDTH, linestyle="--")
     plt.margins(x=0)
     plt.title(title)
     plt.xlabel(xlabel)
