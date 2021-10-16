@@ -27,18 +27,48 @@ class BaseNet(nn.Module):
         return x.transpose(1, 2)
 
 
+class BaseCNN(nn.Module):
+    """
+    Baseline CNN for window classification.
+    """
+
+    def __init__(self, *, window_size, num_channels, num_classes=5, input_dim=3):
+        super().__init__()
+
+        self.conv1 = nn.Conv1d(num_channels * input_dim, 32, 1)
+        self.conv2 = nn.Conv1d(32, 64, 1)
+        self.conv3 = nn.Conv1d(64, 128, 1)
+        self.fc1 = nn.Linear(window_size * 128, 256)
+        self.fc2 = nn.Linear(256, window_size * num_classes)
+
+    def forward(self, x):
+        x = x.flatten(-2, -1)
+        x = x.transpose(1, 2)
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = x.flatten(-2, -1)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        return x.view(-1, 5, 10)
+
+
 class SimpleCNN(nn.Module):
     """
     3 layer simple CNN followed by 2 FC layers.
     """
 
     def __init__(self, num_bands, input_dim=3):
-        super(SimpleCNN, self).__init__()
+        super().__init__()
         self.num_bands = num_bands
         self.conv1 = nn.Conv1d(input_dim, 32, 1)
         self.conv2 = nn.Conv1d(32, 64, 1)
         self.conv3 = nn.Conv1d(64, 128, 1)
-        self.fc1 = nn.Linear(128 * self.bands, 64)
+        self.fc1 = nn.Linear(128 * self.num_bands, 64)
         self.fc2 = nn.Linear(64, 5)
 
     def forward(self, x):
