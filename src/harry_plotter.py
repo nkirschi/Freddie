@@ -21,9 +21,11 @@ mpl.rcParams.update({
 })
 
 
-def plot_metrics(metric, ylabel=None, outfile=None):
+def plot_metrics(train_metric, eval_metric, ylabel=None, outfile=None):
     plt.figure(figsize=(4, 3))
-    plt.plot(range(1, len(metric) + 1), metric)
+    plt.plot(range(1, len(train_metric) + 1), train_metric, label="training")
+    plt.plot(range(1, len(eval_metric) + 1), eval_metric, label="validation")
+    plt.legend()
     plt.grid(linestyle="--")
     plt.xlabel("Epoch")
     plt.ylabel(ylabel)
