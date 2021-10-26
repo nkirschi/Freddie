@@ -1,176 +1,128 @@
 # %%
 
+import os
+import shutil
 import torch
 import torch.nn as nn
 import utils
-import neptune.new as neptune
+import json
+import wandb
+import models
+import constants as const
 
-from constants import *
 from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection, Accuracy, F1
-from messenger_dataset import ClassificationDataset, PredictionDataset
-from models import *
+from messenger_dataset import MessengerDataset
+from fitter import Fitter
 
-# %%
 
-MODEL_NAME = "cnn"
-EPOCHS = 20
-BATCH_SIZE = 4096
-LEARNING_RATE = 1e-3
-NUM_WORKERS = 32  # 4 per GPU seems to be a rule of thumb
-DROPOUT = 0.2
+def load_params():
+    with open(utils.resolve_path(const.HPARAMS_FILE)) as h, \
+            open(utils.resolve_path(const.TPARAMS_FILE)) as t:
+        return json.load(h), json.load(t)
 
-SEED = 42
-EVAL_SPLIT = 0.2
-WINDOW_SIZE = 10
 
-# %%
+def create_run_directory():
+    path = utils.resolve_path(const.RUNS_DIR)  # runs directory
+    run_ids = list(map(int, next(os.walk(path))[1]))  # subfolders as ints
+    next_id = (max(run_ids) + 1) if run_ids else 0  # highest id plus one
+    run_path = os.path.join(path, f"{next_id:04d}")  # path for new run
+    os.mkdir(run_path)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-parallelized = device != "cpu" and torch.cuda.device_count() > 1
-print(f"Device: {device}", f"#GPUs: {torch.cuda.device_count()}", sep="\n")
+    return run_path
 
-# %%
 
-run = neptune.init(
-    project="nelorth/freddie",
-    api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIwYWE3NzA2NS0yMTMwLTQ4YzMtYmYzYy0zYjEyNmVmNTBjMGMifQ==",
-)
+def set_up_devices():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    parallelized = device != "cpu" and torch.cuda.device_count() > 1
+    print(f"Device: {device}", f"#GPUs: {torch.cuda.device_count()}", sep="\n")
+    return device, parallelized
 
-# %%
 
-utils.apply_global_seed(SEED)
+def save_model(model, path, filename):
+    module = model.module if parallelized else model
+    dest = os.path.join(path, filename + ".pth")
+    torch.save(module.state_dict(), dest)
+    return dest
 
-# %%
 
-ds = ClassificationDataset(utils.resolve_path(DATA_DIR, TRAIN_FILE), window_size=WINDOW_SIZE, partial=False)
-train_ds, test_ds = ds.split(EVAL_SPLIT)
+def train_step_callback(model, loss, metrics, epoch):
+    model_path = save_model(model, run_path, f"epoch_{epoch:02d}")
+    if TPARAMS["wandb_enabled"]:
+        wandb.save(model_path, run_path)
+        wandb.log({"train_loss": loss})
+        wandb.log({key: val for key, val in metrics.items()})
 
-# %%
 
-train_dl = DataLoader(train_ds, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=True)
-test_dl = DataLoader(test_ds, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=True)
+def eval_step_callback(model, loss, metrics, epoch):
+    if TPARAMS["wandb_enabled"]:
+        wandb.log({"eval_loss": loss})
+        wandb.log({key: val for key, val in metrics.items()})
 
-# %%
 
-model = BaseCNN(window_size=WINDOW_SIZE, num_channels=2)
+# initialize training environment
+HPARAMS, TPARAMS = load_params()
+
+run_path = create_run_directory()
+shutil.copy(utils.resolve_path(const.HPARAMS_FILE), os.path.join(run_path, const.HPARAMS_FILE))
+if TPARAMS["wandb_enabled"]:
+    wandb.init(project=TPARAMS["wandb_project"], entity=TPARAMS["wandb_entity"], config=HPARAMS)
+device, parallelized = set_up_devices()
+utils.apply_global_seed(HPARAMS["seed"])  # apply the same seed to all libraries for reproducability
+
+# prepare data loaders
+ds = MessengerDataset(utils.resolve_path(const.DATA_DIR),
+                      features=HPARAMS["features"],
+                      window_size=HPARAMS["window_size"],
+                      future_size=HPARAMS["future_size"],
+                      # use_orbits=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                      )
+ds_train, ds_eval = ds.split(HPARAMS["eval_split"])
+dl_train = DataLoader(ds_train,
+                      batch_size=HPARAMS["batch_size"],
+                      num_workers=TPARAMS["num_workers"],
+                      pin_memory=True)
+dl_eval = DataLoader(ds_eval,
+                     batch_size=HPARAMS["batch_size"],
+                     num_workers=TPARAMS["num_workers"],
+                     pin_memory=True)
+
+# create model
+Arch = getattr(models, HPARAMS["model_arch"])
+model = Arch(window_size=HPARAMS["window_size"],
+             future_size=HPARAMS["future_size"],
+             num_channels=len(HPARAMS["features"]))
 if parallelized:
     model = nn.DataParallel(model)
 model.to(device, non_blocking=True)
+if TPARAMS["wandb_enabled"]:
+    wandb.watch(model.module if parallelized else model, log="all")
 
-# %%
+# define optimization criterion
+class_dist = ds.get_class_distribution()
+weights = sum(class_dist) / class_dist
+criterion = nn.CrossEntropyLoss(weight=weights).to(device)
 
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+# define gradient descent optimizer
+Optim = getattr(torch.optim, HPARAMS["optimizer"])
+optimizer = Optim(model.parameters(), lr=HPARAMS["learning_rate"])
+
+# define evaluation metrics
 metrics = MetricCollection({
-    "accuracy": Accuracy(num_classes=len(CLASSES),
+    "accuracy": Accuracy(num_classes=len(const.CLASSES),
                          dist_sync_on_step=True,
                          compute_on_step=False),
-    "macro_f1": F1(num_classes=len(CLASSES),
+    "macro_f1": F1(num_classes=len(const.CLASSES),
                    average="macro",
                    mdmc_average="global",
                    dist_sync_on_step=True,
                    compute_on_step=False)
 }).to(device, non_blocking=True)
-train_metrics = metrics.clone()
-eval_metrics = metrics.clone()
 
-# %%
-
-run["params"] = {
-    "batch_size": BATCH_SIZE,
-    "dropout": DROPOUT,
-    "learning_rate": LEARNING_RATE,
-    "optimizer": type(optimizer).__name__,
-    "criterion": type(criterion).__name__
-}
-
-# %%
-
-
-def save_model(model, filename):
-    module = model.module if parallelized else model
-    path = utils.resolve_path(MODELS_DIR, MODEL_NAME, filename + ".pth")
-    torch.save(module.state_dict(), path)
-    return path
-
-
-# %%
-
-console_log = lambda loss, metrics: f"loss: {loss:.8f}".join(
-    f" | {key}: {float(val):.8f}" for (key, val) in metrics.items()) + f" [{batch + 1}/{size}]"
-size = len(train_dl)
-
-for epoch in range(1, EPOCHS + 1):
-    model.train()
-    print("Training...", end="\n\n")
-    print(f"Epoch {epoch}/{EPOCHS}\n" + 16 * "-")
-
-    running_loss = 0.0
-
-    # one pass on entire training set
-    for batch, (X, y) in enumerate(train_dl):
-        # move tensors to device
-        X = X.to(device, non_blocking=True)
-        y = y.to(device, non_blocking=True)
-
-        # forward propagation
-        pred = model(X)
-
-        # metric calculation
-        loss = criterion(pred, y)
-        train_metrics(pred, y)
-        running_loss += loss.item()
-
-        # backward propagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        # intermediate logging
-        if (batch + 1) % 100 == 0:
-            print(console_log(running_loss / size, train_metrics.compute()), end="\r")
-
-    # calculate metrics and log them
-    loss = running_loss / size
-    metrics = train_metrics.compute()
-    run["train/loss"].log(loss)
-    for key, val in metrics.items():
-        run[f"train/{key}"].log(val)
-    print(console_log(loss, metrics), end="\n\n")
-
-    # save model checkpoint
-    path = save_model(model, f"epoch_{epoch:02d}")
-    run[f"checkpoints/epoch{epoch:02d}"].upload(path)
-
-    model.eval()
-    print("Evaluating...", end="\n\n")
-    criterion = nn.CrossEntropyLoss()
-
-    with torch.no_grad():
-
-        running_loss = 0.0
-
-        for X, y in test_dl:
-            X = X.to(device, non_blocking=True)
-            y = y.to(device, non_blocking=True)
-
-            pred = model(X)
-            running_loss += criterion(pred, y).item()
-            eval_metrics(pred, y)
-
-        # compute final result
-        loss = running_loss / size
-        metrics = eval_metrics.compute()
-
-        # log metrics to Neptune
-        run["eval/loss"].log(loss)
-        for key, val in metrics.items():
-            run[f"eval/{key}"].log(val)
-
-        # log metrics to console
-        print(metrics)
-
-# %%
-
-run.stop()
+# fit the model to the training set
+fitter = Fitter(optimizer, criterion, metrics,
+                max_epochs=TPARAMS["max_epochs"],
+                device=device,
+                train_step_callback=train_step_callback,
+                eval_step_callback=eval_step_callback)
+fitter.fit(model, dl_train, dl_eval)
