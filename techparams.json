@@ -1,0 +1,7 @@
+{
+    "max_epochs": 10,
+    "num_workers": 32,
+    "wandb_enabled": true,
+    "wandb_project": "freddie",
+    "wandb_entity": "nelorth"
+}
