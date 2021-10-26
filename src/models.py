@@ -1,30 +1,29 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from constants import *
 
 
 class BaseNet(nn.Module):
     """
-    Baseline model for window classification.
+    Baseline model with two linear layers and one activation.
     """
 
-    def __init__(self, num_bands, input_dim=3):
+    def __init__(self, window_size, future_size, num_channels, num_classes=5):
         super().__init__()
 
         self.flatten = nn.Flatten(-2, -1)
-        self.linear1 = nn.Linear(num_bands * input_dim, 16)
+        self.linear1 = nn.Linear(num_channels * window_size, 32)
         self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(16, 5)
+        self.linear2 = nn.Linear(32, (num_classes) * (window_size + future_size))
+        self.unflatten = nn.Unflatten(-1, (num_classes, window_size + future_size))
 
     def forward(self, x):
         x = self.flatten(x)
         x = self.linear1(x)
         x = self.relu(x)
         x = self.linear2(x)
+        x = self.unflatten(x)
 
-        return x.transpose(1, 2)
+        return x
 
 
 class BaseCNN(nn.Module):
