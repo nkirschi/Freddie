@@ -50,14 +50,14 @@ def train_step_callback(model, loss, metrics, epoch):
     model_path = save_model(model, run_path, f"epoch_{epoch:02d}")
     if TPARAMS["wandb_enabled"]:
         wandb.save(model_path, run_path)
-        wandb.log({"train_loss": loss})
-        wandb.log({key: val for key, val in metrics.items()})
+        wandb.log({"train_loss": loss}, step=epoch)
+        wandb.log({key: val for key, val in metrics.items()}, step=epoch)
 
 
 def eval_step_callback(model, loss, metrics, epoch):
     if TPARAMS["wandb_enabled"]:
-        wandb.log({"eval_loss": loss})
-        wandb.log({key: val for key, val in metrics.items()})
+        wandb.log({"eval_loss": loss}, step=epoch)
+        wandb.log({key: val for key, val in metrics.items()}, step=epoch)
 
 
 # initialize training environment
