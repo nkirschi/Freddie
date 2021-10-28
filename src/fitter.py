@@ -9,7 +9,7 @@ from torchmetrics.collections import MetricCollection
 class Fitter:
 
     def __init__(self, optimizer: Optimizer, criterion: Module, metrics: MetricCollection, *,
-                 max_epochs: int, device="cuda", train_step_callback=None, eval_step_callback=None):
+                 max_epochs: int, device="cuda", after_train_step=None, after_eval_step=None):
 
         self.optimizer = optimizer
         self.criterion = criterion
@@ -17,8 +17,8 @@ class Fitter:
 
         self.max_epochs = max_epochs
         self.device = device
-        self.train_step_callback = train_step_callback
-        self.eval_step_callback = eval_step_callback
+        self.train_step_callback = after_train_step
+        self.eval_step_callback = after_eval_step
 
     def fit(self, model: Module, dl_train: DataLoader, dl_eval: DataLoader):
         for epoch in range(1, self.max_epochs + 1):
