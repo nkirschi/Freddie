@@ -5,7 +5,7 @@ import shutil
 import torch
 import torch.nn as nn
 import utils
-import json
+import yaml
 import wandb
 import models
 import constants as const
@@ -19,7 +19,7 @@ from fitter import Fitter
 def load_params():
     with open(utils.resolve_path(const.HPARAMS_FILE)) as h, \
             open(utils.resolve_path(const.TPARAMS_FILE)) as t:
-        return json.load(h), json.load(t)
+        return yaml.load(h, Loader=yaml.FullLoader), yaml.load(t, Loader=yaml.FullLoader)
 
 
 def create_run_directory():
@@ -62,6 +62,8 @@ def eval_step_callback(model, loss, metrics, epoch):
 
 # initialize training environment
 HPARAMS, TPARAMS = load_params()
+print("hyperparameters:", HPARAMS)
+print("techparameters:", TPARAMS)
 
 run_path = create_run_directory()
 shutil.copy(utils.resolve_path(const.HPARAMS_FILE), os.path.join(run_path, const.HPARAMS_FILE))
@@ -75,7 +77,7 @@ ds = MessengerDataset(utils.resolve_path(const.DATA_DIR),
                       features=HPARAMS["features"],
                       window_size=HPARAMS["window_size"],
                       future_size=HPARAMS["future_size"],
-                      # use_orbits=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                      use_orbits=HPARAMS["use_orbits"],
                       )
 ds_train, ds_eval = ds.split(HPARAMS["eval_split"])
 dl_train = DataLoader(ds_train,
@@ -123,6 +125,6 @@ metrics = MetricCollection({
 fitter = Fitter(optimizer, criterion, metrics,
                 max_epochs=TPARAMS["max_epochs"],
                 device=device,
-                train_step_callback=train_step_callback,
-                eval_step_callback=eval_step_callback)
+                after_train_step=train_step_callback,
+                after_eval_step=eval_step_callback)
 fitter.fit(model, dl_train, dl_eval)

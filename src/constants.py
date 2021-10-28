@@ -15,8 +15,8 @@ LABEL_FILE = "messenger-0001_-4094_labelled.csv"
 STATS_FILE = "statistics.csv"
 DIST_FILE = "class_distribution.csv"
 HEALTH_FILE = "orbit_health.csv"
-HPARAMS_FILE = "hyperparams.json"
-TPARAMS_FILE = "techparams.json"
+HPARAMS_FILE = "hyperparams.yaml"
+TPARAMS_FILE = "techparams.yaml"
 
 # important column names
 DATE_COL = "DATE"
