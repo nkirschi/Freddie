@@ -13,7 +13,7 @@ class BaseNet(nn.Module):
         self.flatten = nn.Flatten(-2, -1)
         self.linear1 = nn.Linear(num_channels * window_size, 32)
         self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(32, (num_classes) * (window_size + future_size))
+        self.linear2 = nn.Linear(32, num_classes * (window_size + future_size))
         self.unflatten = nn.Unflatten(-1, (num_classes, window_size + future_size))
 
     def forward(self, x):

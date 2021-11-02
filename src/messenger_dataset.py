@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
-import utils
-import os
+import utils.ioutils as ioutils
+import random
 
 from constants import *
 from itertools import chain
@@ -13,13 +13,13 @@ class MessengerDataset(Dataset):
     The MESSENGER dataset, cut into fixed-length sliding time windows.
     """
 
-    def __init__(self, data_path, *, features, window_size, future_size, use_orbits=None, normalize=True):
+    def __init__(self, data_path, *, features, window_size, future_size, use_orbits=1.0, normalize=True):
         """
         Loads the MESSENGER dataset from orbits_path and configures it according to the parameters.
 
         Parameters
         ----------
-        data_path : str
+        data_path : Path
             The path to the folder containing the MESSENGER data.
         features : list of str
             The names of features to include in the dataset. Available features:
@@ -29,8 +29,8 @@ class MessengerDataset(Dataset):
             The length each window shall have.
         future_size : int
             The number of time steps to predict into the future.
-        use_orbits : list of int, default None
-            The IDs of orbits to load. If None, all orbits are loaded.
+        use_orbits : float or list of int, default 1.0
+            Either a percentage in (0,1) or a list of IDs of orbits to load. If 1.0, all orbits are loaded.
         normalize : bool, default True
             Whether to normalize the features.
         """
@@ -51,22 +51,22 @@ class MessengerDataset(Dataset):
         # set auxiliary variables
         self.skip_size = (window_size + future_size) - 1  # how much is missing in the end
         self.orbit_sizes = pd.Series(len(orbit) for orbit in self.orbits)  # the original lengths of all orbits
-        self.cum_sizes = (self.orbit_sizes - self.skip_size).cumsum()  # the cumulative final orbit lengths
+        self.cum_sizes = (self.orbit_sizes - self.skip_size).cumsum()  # the cumulative number of windows per orbit
 
     def __load_stats(self):
         return pd.read_csv(
-            utils.resolve_path(self.data_path, STATS_FILE),
+            ioutils.resolve_path(self.data_path) / STATS_FILE,
             usecols=[STAT_COL].extend(self.features),
             index_col=STAT_COL
         )
 
     def __load_class_dist(self):
-        return pd.read_csv(utils.resolve_path(self.data_path, DIST_FILE), index_col=0)
+        return pd.read_csv(ioutils.resolve_path(self.data_path) / FREQS_FILE, index_col=0)
 
     def __load_data(self):
         orbits = []
         for file in self.__determine_orbits():
-            df_orbit = pd.read_csv(os.path.join(self.data_path, TRAIN_SUBDIR, file),
+            df_orbit = pd.read_csv(self.data_path / TRAIN_SUBDIR / file,
                                    usecols=[DATE_COL, LABEL_COL].extend(self.features),
                                    index_col=DATE_COL,
                                    parse_dates=True,
@@ -80,10 +80,13 @@ class MessengerDataset(Dataset):
         return orbits
 
     def __determine_orbits(self):
-        if self.use_orbits is None:
-            return sorted(os.listdir(os.path.join(self.data_path, TRAIN_SUBDIR)))
-        else:
+        if isinstance(self.use_orbits, list):
             return map(lambda n: ORBIT_FILE(n), self.use_orbits)
+        else:
+            orbits = sorted((self.data_path / TRAIN_SUBDIR).glob("*.csv"))
+            if self.use_orbits < 1:
+                orbits = random.sample(orbits, int(self.use_orbits * len(orbits)))
+            return orbits
 
     def __len__(self):
         """
@@ -164,5 +167,5 @@ class MessengerDataset(Dataset):
 
         return Subset(self, train_indices), Subset(self, test_indices)
 
-    def get_class_distribution(self):
+    def get_class_frequencies(self):
         return torch.tensor(self.class_dist.values, dtype=torch.float32)

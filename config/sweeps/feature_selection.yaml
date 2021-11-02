@@ -1,0 +1,16 @@
+program: train.py
+method: grid
+metric:
+  name: eval/macro_f1
+  goal: maximize
+parameters:
+  features:
+    values:
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO]
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO, DBX_MSO, DBY_MSO, DBZ_MSO]
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO, RHO_DIPOLE, PHI_DIPOLE, THETA_DIPOLE]
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO, BX_DIPOLE, BY_DIPOLE, BZ_DIPOLE, BABS_DIPOLE]
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO, RHO, RXY]
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO, X, Y, Z, D]
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO, VX, VY, VZ, VABS]
+      - [X_MSO, Y_MSO, Z_MSO, BX_MSO, BY_MSO, BZ_MSO, COSALPHA]

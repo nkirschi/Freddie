@@ -1,6 +1,9 @@
-torchmetrics~=0.4.1
-wandb~=0.12.1
-numpy~=1.19.5
 matplotlib~=3.4.2
+numpy~=1.19.5
 pandas~=1.2.4
+pyyaml~=5.4.1
 setuptools~=52.0.0
+torchmetrics~=0.4.1
+torch~=1.10.0
+wandb~=0.12.1
+yaml~=0.2.5

@@ -1,5 +1,4 @@
 batch_size: 4096
-dropout_rate: 0.2
 eval_split: 0.3
 features:
 - X_MSO
@@ -8,10 +7,10 @@ features:
 - BX_MSO
 - BY_MSO
 - BZ_MSO
-future_size: 2
+future_size: 10
 learning_rate: 0.001
 model_arch: BaseNet
 optimizer: Adam
 seed: 1337
-use_orbits:  # [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-window_size: 10
+use_orbits: 0.1
+window_size: 30
