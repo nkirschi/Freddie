@@ -1,6 +1,5 @@
 .idea/
-archives/
-data/
-runs/
-temp/
+/data/
+/runs/
+/temp/
 *.egg-info/
