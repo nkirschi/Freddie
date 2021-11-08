@@ -1,0 +1,50 @@
+program: train.py
+method: random
+metric:
+  name: eval/macro_f1
+  goal: maximize
+parameters:
+  window_size:
+    distribution: q_log_uniform
+    min: 2.302585092994046  # log(10)
+    max: 6.907755278982137  # log(1000)
+  future_size:
+    distribution: q_log_uniform
+    min: 1.6094379124341003  # log(5)
+    max: 3.912023005428146  # log(50)
+  hidden_layers:
+    distribution: int_uniform
+    min: 1
+    max: 3
+  hidden_size0: &hidden_sizes
+    distribution: categorical
+    values:
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512
+  hidden_size1: *hidden_sizes
+  hidden_size2: *hidden_sizes
+  learning_rate:
+    distribution: log_uniform
+    min: -11.512925464970229  # log(1e-5)
+    max: -2.3025850929940455  # log(1e-1)
+  batch_size:
+    distribution: categorical
+    values:
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512
+      - 1024
+      - 2048
+      - 4096
+      - 8192
+      - 16384
+early_terminate:
+  type: hyperband
+  min_iter: 3

@@ -3,5 +3,5 @@ num_workers: 16
 wandb_dir: /root/
 wandb_enabled: true
 wandb_entity: nelorth
-wandb_group: feature_selection
+wandb_group: baseline_tuning
 wandb_project: freddie

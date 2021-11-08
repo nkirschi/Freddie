@@ -1,7 +1,7 @@
 import os
-import shutil
 import ast
 import sys
+import yaml
 
 from pathlib import Path
 from os import PathLike
@@ -17,15 +17,16 @@ def ensure_directory(path: PathLike) -> None:
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
-def create_run_directory():
-    path = resolve_path(const.RUNS_DIR)  # runs directory
+def create_run_directory(hparams):
+    path = resolve_path(const.RUNS_DIR)               # runs directory
     run_ids = list(map(int, next(os.walk(path))[1]))  # subfolders as ints
-    next_id = (max(run_ids) + 1) if run_ids else 0  # highest id plus one
-    run_path = path / const.RUN_NAME(next_id)  # path for new run
+    next_id = (max(run_ids) + 1) if run_ids else 0    # highest id plus one
+    run_path = path / const.RUN_NAME(next_id)         # path for new run
 
-    run_path.mkdir()  # create directory for new run
-    (run_path / const.CKPT_SUBDIR).mkdir()  # create subdirectory for checkpoints
-    shutil.copy(resolve_path(const.HPARAMS_FILE), run_path)  # copy hyperparams file
+    run_path.mkdir()                                     # create directory for new run
+    (run_path / const.CKPT_SUBDIR).mkdir()               # create subdirectory for checkpoints
+    with open(run_path / const.HPARAMS_FILE, "w") as f:  # save hyperparameter config
+        yaml.dump(hparams, f)
 
     return run_path, next_id
 

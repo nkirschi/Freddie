@@ -1,7 +1,6 @@
 import torch
 import json
 import wandb
-import utils.torchutils as torchutils
 import constants as c
 
 from fitter import Callback
@@ -17,7 +16,7 @@ class LoggingCallback(Callback):
 
     def after_train_step(self, model, loss, metrics, epoch):
         dest = self.run_path / c.CKPT_SUBDIR / c.CKPT_FILE(epoch)
-        torch.save(torchutils.unwrap_model(model).state_dict(), dest)
+        torch.save(model.state_dict(), dest)
 
         metrics = {key: val.tolist() for key, val in metrics.items()}
         self.metrics_history["train/loss"].append(loss)
@@ -28,8 +27,6 @@ class LoggingCallback(Callback):
             wandb.save(str(dest), str(self.run_path))
             wandb.log({"train/loss": loss}, step=epoch)
             wandb.log(metrics, step=epoch)
-
-        return False
 
     def after_eval_step(self, model, loss, metrics, epoch):
         metrics = {key: val.tolist() for key, val in metrics.items()}
@@ -56,8 +53,6 @@ class LoggingCallback(Callback):
                     )
             wandb.log(scalar_metrics, step=epoch)
             wandb.log(vector_metrics, step=epoch)
-
-        return False
 
     def after_fitting(self):
         with open(self.run_path / c.METRICS_FILE, "w") as f:

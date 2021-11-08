@@ -4,23 +4,32 @@ import torch.nn.functional as F
 
 class BaseNet(nn.Module):
     """
-    Baseline model with two linear layers and one activation.
+    Baseline model with a couple of linear layers and ReLU activations.
     """
 
-    def __init__(self, window_size, future_size, num_channels, num_classes=5):
+    def __init__(self, num_channels, window_size, future_size, hidden_sizes, num_classes=5):
         super().__init__()
 
+        in_shape = (num_channels, window_size)
+        out_shape = (num_classes, window_size + future_size)
+
         self.flatten = nn.Flatten(-2, -1)
-        self.linear1 = nn.Linear(num_channels * window_size, 32)
+        self.linear_in = nn.Linear(in_shape[0] * in_shape[1], hidden_sizes[0])
         self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(32, num_classes * (window_size + future_size))
-        self.unflatten = nn.Unflatten(-1, (num_classes, window_size + future_size))
+        hidden_stack = []
+        for i in range(len(hidden_sizes) - 1):
+            hidden_stack.append(nn.Linear(hidden_sizes[i], hidden_sizes[i + 1]))
+            hidden_stack.append(nn.ReLU())
+        self.hidden_stack = nn.Sequential(*hidden_stack)
+        self.linear_out = nn.Linear(hidden_sizes[-1], out_shape[0] * out_shape[1])
+        self.unflatten = nn.Unflatten(-1, out_shape)
 
     def forward(self, x):
         x = self.flatten(x)
-        x = self.linear1(x)
+        x = self.linear_in(x)
         x = self.relu(x)
-        x = self.linear2(x)
+        x = self.hidden_stack(x)
+        x = self.linear_out(x)
         x = self.unflatten(x)
 
         return x

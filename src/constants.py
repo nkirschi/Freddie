@@ -1,5 +1,6 @@
 # relevant directories !relative to project root!
-DATA_DIR     = "data"         # where metadata about data is located
+CONFIG_DIR   = "config"  # where the configuration files are held
+DATA_DIR     = "data"    # where metadata about data is located
 LABEL_SUBDIR = "labels"  # where the label mapping is located
 RAW_SUBDIR   = "raw"     # where the raw orbit data is located
 TRAIN_SUBDIR = "train"   # where the final training data resides
@@ -17,8 +18,8 @@ LABEL_FILE = "messenger-0001_-4094_labelled.csv"
 STATS_FILE = "statistics.csv"
 FREQS_FILE = "class_frequencies.csv"
 HEALTH_FILE = "orbit_health.csv"
-HPARAMS_FILE = "config/hyperparams.yaml"
-TPARAMS_FILE = "config/techparams.yaml"
+HPARAMS_FILE = "hyperparams.yaml"
+TPARAMS_FILE = "techparams.yaml"
 METRICS_FILE = "metrics.json"
 CKPT_FILE = lambda n: f"epoch_{n:02d}.pth"
 RUN_NAME = lambda n: f"{n:04d}"

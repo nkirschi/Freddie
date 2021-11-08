@@ -26,6 +26,3 @@ def count_trainable_parameters(model):
 def is_model_on_gpu(model):
     return next(model.parameters()).is_cuda
 
-
-def unwrap_model(model):
-    return model.module if isinstance(model, DataParallel) else model
