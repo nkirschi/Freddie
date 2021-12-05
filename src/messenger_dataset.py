@@ -1,3 +1,16 @@
+"""
+This file contains the central dataset class.
+"""
+
+__author__ = "Nikolas Kirschstein"
+__copyright__ = "Copyright 2021, Nikolas Kirschstein, All rights reserved."
+__license__ = "Apache License 2.0"
+__version__ = "1.0.0"
+__maintainer__ = "Nikolas Kirschstein"
+__email__ = "nikolas.kirschstein@gmail.com"
+__status__ = "Prototype"
+
+
 import torch
 import pandas as pd
 import utils.ioutils as ioutils
@@ -10,7 +23,7 @@ from torch.utils.data import Dataset, Subset
 
 class MessengerDataset(Dataset):
     """
-    The MESSENGER dataset, cut into fixed-length sliding time windows.
+    The MESSENGER dataset, sliced into fixed-length sliding time windows.
     """
 
     def __init__(self, data_path, *, features, window_size, future_size, use_orbits=1.0, normalize=True):
@@ -167,5 +180,22 @@ class MessengerDataset(Dataset):
 
         return Subset(self, train_indices), Subset(self, test_indices)
 
+    def get_orbits(self):
+        """
+        Returns the orbits loaded by this dataset instance.
+
+        Returns
+        -------
+        A list of all orbits used by this instance.
+        """
+        return self.orbits
+
     def get_class_frequencies(self):
+        """
+        Returns the frequency of each class.
+
+        Returns
+        -------
+        A tensor containing the class frequencies.
+        """
         return torch.tensor(self.class_dist.values, dtype=torch.float32)
