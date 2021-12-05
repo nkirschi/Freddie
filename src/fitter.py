@@ -1,3 +1,16 @@
+"""
+This file contains the main training logic.
+"""
+
+__author__ = "Nikolas Kirschstein"
+__copyright__ = "Copyright 2021, Nikolas Kirschstein, All rights reserved."
+__license__ = "Apache License 2.0"
+__version__ = "1.0.0"
+__maintainer__ = "Nikolas Kirschstein"
+__email__ = "nikolas.kirschstein@gmail.com"
+__status__ = "Prototype"
+
+
 import torch
 
 from torch.nn import Module, DataParallel
@@ -7,18 +20,6 @@ from torch._C import device
 from torch.nn.modules.loss import _Loss
 from torchmetrics.collections import MetricCollection
 from abc import ABC
-
-
-class Callback(ABC):
-
-    def after_train_step(self, model: Module, loss: float, metrics: dict, epoch: int) -> bool:
-        pass
-
-    def after_eval_step(self, model: Module, loss: float, metrics: dict, epoch: int) -> bool:
-        pass
-
-    def after_fitting(self):
-        pass
 
 
 class Fitter:
@@ -105,8 +106,8 @@ class Fitter:
         for batch, (x, y) in enumerate(dl_train):
 
             # move tensors to the training device
-            x = x.to(self.train_device, non_blocking=True)
-            y = y.to(self.train_device, non_blocking=True)
+            x = x.to(self.train_device)
+            y = y.to(self.train_device)
 
             # forward propagation
             pred = model(x)
@@ -118,13 +119,14 @@ class Fitter:
             running_loss += loss.item()
 
             # backward propagation
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=True)
             loss.backward()
             self.optimizer.step()
 
             # intermediate logging
             if self.log_every > 0 and (batch + 1) % self.log_every == 0:
-                self.__log_progress(running_loss / 100, self.train_metrics.compute(), batch + 1, len(dl_train)),
+                self.__log_progress(running_loss / self.log_every, self.train_metrics.compute(),
+                                    batch + 1, len(dl_train)),
                 running_loss = 0.0
 
         # calculate total loss and metrics
@@ -134,9 +136,7 @@ class Fitter:
         self.__log_progress(loss, metrics, len(dl_train), len(dl_train), end="\n")
 
         if self.callback:
-            return self.callback.after_train_step(self._unwrap(model), loss, metrics, epoch)
-
-        return False
+            self.callback.after_train_step(self._unwrap(model), loss, metrics, epoch)
 
     @torch.no_grad()
     def __eval_step(self, model: Module, dl_eval: DataLoader, epoch: int):
@@ -148,8 +148,8 @@ class Fitter:
         epoch_loss = 0.0
 
         for x, y in dl_eval:
-            x = x.to(self.eval_device, non_blocking=True)
-            y = y.to(self.eval_device, non_blocking=True)
+            x = x.to(self.eval_device)
+            y = y.to(self.eval_device)
 
             pred = model(x)
             epoch_loss += self.criterion(pred, y).item()
@@ -161,15 +161,13 @@ class Fitter:
         self.eval_metrics.reset()
 
         if self.callback:
-            return self.callback.after_eval_step(self._unwrap(model), loss, metrics, epoch)
-
-        return False
+            self.callback.after_eval_step(self._unwrap(model), loss, metrics, epoch)
 
     def _ensure_device(self, model, device):
-        model.to(device, non_blocking=True)
-        self.criterion.to(device, non_blocking=True)
-        self.train_metrics.to(device, non_blocking=True)
-        self.eval_metrics.to(device, non_blocking=True)
+        model.to(device)
+        self.criterion.to(device)
+        self.train_metrics.to(device)
+        self.eval_metrics.to(device)
 
     @staticmethod
     def _unwrap(model):
@@ -184,3 +182,18 @@ class Fitter:
         for key, val in metrics.items():
             print(f"| {key}: {float(val):.8f}", end=" ")
         print(end=end)
+
+
+class Callback(ABC):
+    """
+    An abstract callback for 'Fitter' defining hooks for different execution points during training.
+    """
+
+    def after_train_step(self, model: Module, loss: float, metrics: dict, epoch: int) -> bool:
+        pass
+
+    def after_eval_step(self, model: Module, loss: float, metrics: dict, epoch: int) -> bool:
+        pass
+
+    def after_fitting(self):
+        pass
