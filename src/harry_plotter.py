@@ -1,9 +1,24 @@
+"""
+Definition of utility plotting functions.
+"""
+
+__author__ = "Nikolas Kirschstein"
+__copyright__ = "Copyright 2021, Nikolas Kirschstein, All rights reserved."
+__license__ = "Apache License 2.0"
+__version__ = "1.0.0"
+__maintainer__ = "Nikolas Kirschstein"
+__email__ = "nikolas.kirschstein@gmail.com"
+__status__ = "Prototype"
+
+
+import constants as c
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
 from itertools import chain, cycle, product
 from matplotlib.dates import DateFormatter
+from matplotlib.patches import Patch
 
 LINEWIDTH = 0.25  # default plot linewidth
 
@@ -33,7 +48,7 @@ def plot_metrics(train_metric, eval_metric, ylabel=None, outfile=None):
     _save_figure(outfile)
 
 
-def plot_components_and_norm(x, Y, *, symbol, vlines=(), title=None, xlabel=None, ylabel=None, outfile=None):
+def plot_orbit(x, Y, *, symbol, labels=(), title=None, xlabel=None, ylabel=None, outfile=None):
     plt.gca().xaxis.set_major_formatter(DateFormatter("$%d$ %b '$%y$\n$%H$:$%M$", usetex=False))
 
     for (i, y) in enumerate(Y):
@@ -43,10 +58,15 @@ def plot_components_and_norm(x, Y, *, symbol, vlines=(), title=None, xlabel=None
     p = plt.plot(x, n, linewidth=LINEWIDTH, label=f"$\\pm||\\vec{{{symbol}}}||$")
     plt.plot(x, -n, linewidth=LINEWIDTH, color=p[-1].get_color())
 
-    colors = ["cyan", "olive", "pink", "gray"]
-    c = cycle(chain(colors, reversed(colors[:-1])))
-    for i, x in enumerate(vlines[:-1]):
-        plt.axvspan(x, vlines[i + 1], alpha=0.5, facecolor=next(c), edgecolor="black", linewidth=0)
+    colors = ["whitesmoke", "indianred", "burlywood", "cornflowerblue", "lightgreen"]
+
+    if len(labels) > 0:
+        for i in range(len(labels) - 1):
+            if labels[i] != 0:
+                plt.axvspan(x[i], x[i + 1], alpha=0.5, facecolor=colors[labels[i]])
+
+        class_legend = [Patch(facecolor=colors[key], label=val) for key, val in c.CLASSES.items()]
+        plt.gca().add_artist(plt.legend(handles=class_legend, loc="upper right"))
 
     plt.grid(linewidth=LINEWIDTH, linestyle="--")
     plt.margins(x=0)
@@ -54,7 +74,7 @@ def plot_components_and_norm(x, Y, *, symbol, vlines=(), title=None, xlabel=None
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.xticks(fontsize=8)
-    plt.legend()
+    plt.legend(loc="upper left")
 
     _save_figure(outfile)
 
