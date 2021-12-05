@@ -1,3 +1,16 @@
+"""
+This file contains a callback for logging during training.
+"""
+
+__author__ = "Nikolas Kirschstein"
+__copyright__ = "Copyright 2021, Nikolas Kirschstein, All rights reserved."
+__license__ = "Apache License 2.0"
+__version__ = "1.0.0"
+__maintainer__ = "Nikolas Kirschstein"
+__email__ = "nikolas.kirschstein@gmail.com"
+__status__ = "Prototype"
+
+
 import torch
 import json
 import wandb
@@ -8,6 +21,9 @@ from collections import defaultdict
 
 
 class LoggingCallback(Callback):
+    """
+    This class defines logging hooks for critical execution points during training.
+    """
 
     def __init__(self, run_path, wandb_enabled):
         self.run_path = run_path
@@ -55,8 +71,5 @@ class LoggingCallback(Callback):
             wandb.log(vector_metrics, step=epoch)
 
     def after_fitting(self):
-        with open(self.run_path / c.METRICS_FILE, "w") as f:
-            json.dump(self.metrics_history, f, indent=4)
-
         if self.wandb_enabled:
             wandb.log({})  # finally commit
