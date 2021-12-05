@@ -1,3 +1,16 @@
+"""
+This file defines important project-wide constants.
+"""
+
+__author__ = "Nikolas Kirschstein"
+__copyright__ = "Copyright 2021, Nikolas Kirschstein, All rights reserved."
+__license__ = "Apache License 2.0"
+__version__ = "1.0.0"
+__maintainer__ = "Nikolas Kirschstein"
+__email__ = "nikolas.kirschstein@gmail.com"
+__status__ = "Prototype"
+
+
 # relevant directories !relative to project root!
 CONFIG_DIR   = "config"  # where the configuration files are held
 DATA_DIR     = "data"    # where metadata about data is located
