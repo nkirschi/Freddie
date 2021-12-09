@@ -140,7 +140,8 @@ model = Arch(num_channels=len(HPARAMS["features"]),
              kernel_sizes=[HPARAMS[f"kernel_size{i}"] for i in range(HPARAMS["conv_layers"])],
              stride_sizes=[HPARAMS[f"stride_size{i}"] for i in range(HPARAMS["conv_layers"])],
              pool_sizes=[HPARAMS[f"pool_size{i}"] for i in range(HPARAMS["conv_layers"])],
-             lstm_sizes=[HPARAMS[f"lstm_size{i}"] for i in range(HPARAMS["lstm_layers"])],
+             rnn_layers=HPARAMS["rnn_layers"],
+             rnn_state_size=HPARAMS["rnn_state_size"],
              dropout_rate=HPARAMS["dropout_rate"])
 
 # let WandB track the model parameters and gradients
