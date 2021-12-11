@@ -10,13 +10,12 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
-
+import constants as c
 import torch
 import pandas as pd
 import utils.ioutils as ioutils
 import random
 
-from constants import *
 from itertools import chain
 from torch.utils.data import Dataset, Subset
 
@@ -68,20 +67,20 @@ class MessengerDataset(Dataset):
 
     def __load_stats(self):
         return pd.read_csv(
-            ioutils.resolve_path(self.data_path) / STATS_FILE,
-            usecols=[STAT_COL].extend(self.features),
-            index_col=STAT_COL
+            ioutils.resolve_path(self.data_path) / c.STATS_FILE,
+            usecols=[c.STAT_COL].extend(self.features),
+            index_col=c.STAT_COL
         )
 
     def __load_class_dist(self):
-        return pd.read_csv(ioutils.resolve_path(self.data_path) / FREQS_FILE, index_col=0)
+        return pd.read_csv(ioutils.resolve_path(self.data_path) / c.FREQS_FILE, index_col=0)
 
     def __load_data(self):
         orbits = []
         for file in self.__determine_orbits():
-            df_orbit = pd.read_csv(self.data_path / TRAIN_SUBDIR / file,
-                                   usecols=[DATE_COL, LABEL_COL].extend(self.features),
-                                   index_col=DATE_COL,
+            df_orbit = pd.read_csv(self.data_path / c.TRAIN_SUBDIR / file,
+                                   usecols=[c.DATE_COL, c.LABEL_COL].extend(self.features),
+                                   index_col=c.DATE_COL,
                                    parse_dates=True,
                                    memory_map=True)
             if self.normalize:
@@ -94,9 +93,9 @@ class MessengerDataset(Dataset):
 
     def __determine_orbits(self):
         if isinstance(self.use_orbits, list):
-            return map(lambda n: ORBIT_FILE(n), self.use_orbits)
+            return map(lambda n: c.ORBIT_FILE(n), self.use_orbits)
         else:
-            orbits = sorted((self.data_path / TRAIN_SUBDIR).glob("*.csv"))
+            orbits = sorted((self.data_path / c.TRAIN_SUBDIR).glob("*.csv"))
             if self.use_orbits < 1:
                 orbits = random.sample(orbits, int(self.use_orbits * len(orbits)))
             return orbits
@@ -145,7 +144,7 @@ class MessengerDataset(Dataset):
         target = self.orbits[orbit].iloc[pos:(pos + self.window_size + self.future_size)]
 
         sample = torch.tensor(window[self.features].values, dtype=torch.float).transpose(0, 1)
-        label = torch.tensor(target[LABEL_COL].values, dtype=torch.long)
+        label = torch.tensor(target[c.LABEL_COL].values, dtype=torch.long)
 
         return sample, label
 
