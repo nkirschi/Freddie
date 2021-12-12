@@ -10,7 +10,6 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
-
 import torch
 
 from torch.nn import Module, DataParallel
@@ -28,7 +27,7 @@ class Fitter:
     """
 
     def __init__(self, optimizer, criterion, train_metrics, eval_metrics, *,
-                 max_epochs, log_every, train_device, eval_device, callback=None):
+                 max_epochs, log_every, train_device, eval_device, callbacks=()):
         """
         Constructs a new fitter with the given optimization parameters.
 
@@ -49,8 +48,8 @@ class Fitter:
             The device to use for the training step.
         eval_device : device or str
             The device to use for the evaluation step.
-        callback : Callback
-            A callback object with hooks being called at key points during fitting.
+        callbacks : list of Callback
+            A list of callback objects with hooks being called at key points during fitting.
         """
 
         self.optimizer = optimizer
@@ -62,7 +61,7 @@ class Fitter:
         self.log_every = log_every
         self.train_device = torch.device(train_device)
         self.eval_device = torch.device(eval_device)
-        self.callback = callback
+        self.callbacks = callbacks
 
     def fit(self, model, dl_train, dl_eval):
         """
@@ -88,19 +87,18 @@ class Fitter:
             self.__train_step(model, dl_train, epoch)
             self.__eval_step(model, dl_eval, epoch)
 
-            # TODO implement early stopping
-
-        if self.callback:
-            self.callback.after_fitting()
+            if any(cb.after_epoch(epoch) for cb in self.callbacks):
+                print("Stopping early")
+                break
 
     def __train_step(self, model: Module, dl_train: DataLoader, epoch: int):
         model = model.module if self.train_device.type == "cpu" else model
         self._ensure_device(model, self.train_device)
 
         model.train()
-        self.train_metrics.reset()
         epoch_loss = 0.0
         running_loss = 0.0
+        self.train_metrics.reset()
 
         # one pass on entire training set
         for batch, (x, y) in enumerate(dl_train):
@@ -125,18 +123,18 @@ class Fitter:
 
             # intermediate logging
             if self.log_every > 0 and (batch + 1) % self.log_every == 0:
-                self.__log_progress(running_loss / self.log_every, self.train_metrics.compute(),
-                                    batch + 1, len(dl_train)),
+                self._log_progress(running_loss / self.log_every, self.train_metrics.compute(),
+                                   batch + 1, len(dl_train)),
                 running_loss = 0.0
 
         # calculate total loss and metrics
         loss = epoch_loss / len(dl_train)
         metrics = self.train_metrics.compute()
         self.train_metrics.reset()
-        self.__log_progress(loss, metrics, len(dl_train), len(dl_train), end="\n")
+        self._log_progress(loss, metrics, len(dl_train), len(dl_train), end="\n")
 
-        if self.callback:
-            self.callback.after_train_step(self._unwrap(model), loss, metrics, epoch)
+        for cb in self.callbacks:
+            cb.after_train_step(self._unwrap(model), loss, metrics, epoch)
 
     @torch.no_grad()
     def __eval_step(self, model: Module, dl_eval: DataLoader, epoch: int):
@@ -144,8 +142,8 @@ class Fitter:
         self._ensure_device(model, self.eval_device)
 
         model.eval()
-        self.eval_metrics.reset()
         epoch_loss = 0.0
+        self.eval_metrics.reset()
 
         for x, y in dl_eval:
             x = x.to(self.eval_device)
@@ -160,8 +158,8 @@ class Fitter:
         metrics = self.eval_metrics.compute()
         self.eval_metrics.reset()
 
-        if self.callback:
-            self.callback.after_eval_step(self._unwrap(model), loss, metrics, epoch)
+        for cb in self.callbacks:
+            cb.after_eval_step(self._unwrap(model), loss, metrics, epoch)
 
     def _ensure_device(self, model, device):
         model.to(device)
@@ -174,7 +172,7 @@ class Fitter:
         return model.module if isinstance(model, DataParallel) else model
 
     @staticmethod
-    def __log_progress(loss, metrics, batch, size, end="\r"):
+    def _log_progress(loss, metrics, batch, size, end="\r"):
         progress = (20 * batch) // size
         print(f"{batch}/{size}", end=" ")
         print(f"[{progress * '=':20}]", end=" ")
@@ -189,11 +187,47 @@ class Callback(ABC):
     An abstract callback for 'Fitter' defining hooks for different execution points during training.
     """
 
-    def after_train_step(self, model: Module, loss: float, metrics: dict, epoch: int) -> bool:
+    def after_train_step(self, model: Module, loss: float, metrics: dict, epoch: int):
+        """
+        Hook called after a training step.
+
+        Parameters
+        ----------
+        model: Module
+            The current state of the model being trained.
+        loss: float
+            The current training loss after the training step.
+        metrics: dict
+            A dictionary of all current training metrics values.
+        epoch: int
+            The current epoch number.
+        """
         pass
 
-    def after_eval_step(self, model: Module, loss: float, metrics: dict, epoch: int) -> bool:
+    def after_eval_step(self, model: Module, loss: float, metrics: dict, epoch: int):
+        """
+        Hook called after an evaluation step.
+
+        Parameters
+        ----------
+        model: Module
+            The current state of the model being trained.
+        loss: float
+            The current evaluation loss after the evaluation step.
+        metrics: dict
+            A dictionary of all current evaluation metrics values.
+        epoch: int
+            The current epoch number.
+        """
         pass
 
-    def after_fitting(self):
+    def after_epoch(self, epoch: int) -> bool:
+        """
+        Hook called after an entire epoch is finished.
+
+        Parameters
+        ----------
+        epoch: int
+            The current epoch number.
+        """
         pass
