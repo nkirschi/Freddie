@@ -12,6 +12,7 @@ __status__ = "Prototype"
 
 import constants as c
 import torch
+import numpy as np
 import pandas as pd
 import utils.ioutils as ioutils
 import random
@@ -25,13 +26,13 @@ class MessengerDataset(Dataset):
     The MESSENGER dataset, sliced into fixed-length sliding time windows.
     """
 
-    def __init__(self, data_path, *, features, window_size, future_size, use_orbits=1.0, normalize=True):
+    def __init__(self, data_root, *, features, window_size, future_size, use_orbits=1.0, normalize=True, train=True):
         """
         Loads the MESSENGER dataset from orbits_path and configures it according to the parameters.
 
         Parameters
         ----------
-        data_path : Path
+        data_root : Path
             The path to the folder containing the MESSENGER data.
         features : list of str
             The names of features to include in the dataset. Available features:
@@ -45,42 +46,43 @@ class MessengerDataset(Dataset):
             Either a percentage in (0,1) or a list of IDs of orbits to load. If 1.0, all orbits are loaded.
         normalize : bool, default True
             Whether to normalize the features.
+        train : bool, default True
+            Whether to use the train or test data.
         """
 
         # initialize attributes
-        self.data_path = data_path
+        self.data_root = data_root
         self.features = features
         self.window_size = window_size
         self.future_size = future_size
         self.use_orbits = use_orbits
         self.normalize = normalize
+        self.train = train
 
         # load data and metadata
-        self.stats = self.__load_stats()
-        self.class_dist = self.__load_class_dist()
-        self.orbits = self.__load_data()
+        self.stats = self._load_stats()
+        self.class_dist = self._load_class_dist()
+        self.orbits = self._load_data()
 
-        # set auxiliary variables
-        self.skip_size = (window_size + future_size) - 1  # how much is missing in the end
-        self.orbit_sizes = pd.Series(len(orbit) for orbit in self.orbits)  # the original lengths of all orbits
-        self.cum_sizes = (self.orbit_sizes - self.skip_size).cumsum()  # the cumulative number of windows per orbit
+        # the cumulative number of windows per orbit
+        self.orbit_borders = self._determine_orbit_borders()
 
-    def __load_stats(self):
+    def _load_stats(self):
         return pd.read_csv(
-            ioutils.resolve_path(self.data_path) / c.STATS_FILE,
+            ioutils.resolve_path(self.data_root) / c.STATS_FILE,
             usecols=[c.STAT_COL].extend(self.features),
             index_col=c.STAT_COL
         )
 
-    def __load_class_dist(self):
-        return pd.read_csv(ioutils.resolve_path(self.data_path) / c.FREQS_FILE, index_col=0)
+    def _load_class_dist(self):
+        return pd.read_csv(ioutils.resolve_path(self.data_root) / c.FREQS_FILE, index_col=0)
 
-    def __load_data(self):
-        orbits = []
-        for file in self.__determine_orbits():
-            df_orbit = pd.read_csv(self.data_path / c.TRAIN_SUBDIR / file,
+    def _load_data(self):
+        orbits = {}
+        subdir = c.TRAIN_SUBDIR if self.train else c.TEST_SUBDIR
+        for file in self._determine_orbits():
+            df_orbit = pd.read_csv(self.data_root / subdir / file,
                                    usecols=[c.DATE_COL, c.LABEL_COL].extend(self.features),
-                                   index_col=c.DATE_COL,
                                    parse_dates=True,
                                    memory_map=True)
             if self.normalize:
@@ -88,17 +90,23 @@ class MessengerDataset(Dataset):
                 mean = self.stats.loc["mean"]
                 std = self.stats.loc["std"]
                 df_orbit.loc[:, self.features] = (data - mean) / std
-            orbits.append(df_orbit)
+            orbits[df_orbit.loc[0, c.ORBIT_COL]] = df_orbit
         return orbits
 
-    def __determine_orbits(self):
+    def _determine_orbits(self):
         if isinstance(self.use_orbits, list):
             return map(lambda n: c.ORBIT_FILE(n), self.use_orbits)
         else:
-            orbits = sorted((self.data_path / c.TRAIN_SUBDIR).glob("*.csv"))
+            orbits = sorted((self.data_root / c.TRAIN_SUBDIR).glob("*.csv"))
             if self.use_orbits < 1:
                 orbits = random.sample(orbits, int(self.use_orbits * len(orbits)))
             return orbits
+
+    def _determine_orbit_borders(self):
+        # the original lengths of all orbits
+        orbit_sizes = np.array([len(orbit) for orbit in self.orbits.values()])
+        skip_size = (self.window_size + self.future_size) - 1
+        return np.append(0, np.cumsum(orbit_sizes - skip_size))
 
     def __len__(self):
         """
@@ -110,7 +118,7 @@ class MessengerDataset(Dataset):
             The total number of samples.
         """
 
-        return self.cum_sizes.iloc[-1]
+        return self.orbit_borders[-1]
 
     def __getitem__(self, idx):
         """
@@ -134,28 +142,29 @@ class MessengerDataset(Dataset):
             If idx is negative or larger than the dataset size.
         """
 
-        if idx < 0 or idx >= len(self):
+        if not 0 <= idx < len(self):
             raise IndexError(f"Index {idx} is out of bounds.")
 
-        orbit = (idx >= self.cum_sizes).sum()                        # orbit index of the requested window
-        pos = idx - pd.Series(0).append(self.cum_sizes).iloc[orbit]  # window index within the orbit
+        orbit_idx = np.sum(idx >= self.orbit_borders) - 1  # orbit index of the requested window
+        orbit = list(self.orbits.values())[orbit_idx]      # orbit data frame corresponding to the index
+        pos = idx - self.orbit_borders[orbit_idx]          # window index within the orbit
 
-        window = self.orbits[orbit].iloc[pos:(pos + self.window_size)]
-        target = self.orbits[orbit].iloc[pos:(pos + self.window_size + self.future_size)]
+        window = orbit.iloc[pos:(pos + self.window_size)][self.features]
+        target = orbit.iloc[pos:(pos + self.window_size + self.future_size)][c.LABEL_COL]
 
-        sample = torch.tensor(window[self.features].values, dtype=torch.float).transpose(0, 1)
-        label = torch.tensor(target[c.LABEL_COL].values, dtype=torch.long)
+        sample = torch.tensor(window.values.transpose(), dtype=torch.float)
+        label = torch.tensor(target.values, dtype=torch.long)
 
         return sample, label
 
-    def split(self, holdout_ratio):
+    def split(self, train_split):
         """
         Partitons the data into disjoint training and evaluation sets on the orbit level.
 
         Parameters
         ----------
-        holdout_ratio : float
-            The percentage of orbits that the evaluation subset shall cover.
+        train_split : float or list of int
+            Either the percentage of orbits or a concrete list of orbit IDs the training subset shall cover.
 
         Returns
         -------
@@ -163,21 +172,27 @@ class MessengerDataset(Dataset):
             Two disjoint subsets of the data.
         """
 
-        # shuffle the orbits
-        cwn = self.cum_sizes
-        orbits = torch.randperm(len(cwn))
+        if isinstance(train_split, list):
+            keys = list(self.orbits.keys())
+            train_orbits = [keys.index(o) for o in train_split]
+            test_orbits = [keys.index(o) for o in list(set(self.orbits.keys()) - set(train_split))]
+        else:
+            # shuffle the orbits
+            orbits = torch.randperm(len(self.orbits))
 
-        # split on the orbit level
-        split_idx = int(holdout_ratio * len(orbits))
-        train_orbits = orbits[split_idx:].tolist()
-        test_orbits = orbits[:split_idx].tolist()
+            # split on the orbit level
+            split_idx = int(train_split * len(orbits))
+            train_orbits = orbits[:split_idx].tolist()
+            test_orbits = orbits[split_idx:].tolist()
 
         # split on the index level
-        orbit_range = lambda o: range(cwn.iloc[o - 1] if o > 0 else 0, cwn.iloc[o])
-        train_indices = list(chain.from_iterable(orbit_range(o) for o in train_orbits))
-        test_indices = list(chain.from_iterable(orbit_range(o) for o in test_orbits))
+        train_indices = list(chain.from_iterable(self._orbit_range(o) for o in train_orbits))
+        test_indices = list(chain.from_iterable(self._orbit_range(o) for o in test_orbits))
 
         return Subset(self, train_indices), Subset(self, test_indices)
+
+    def explode_orbits(self):
+        return {key: Subset(self, self._orbit_range(i)) for i, key in enumerate(self.orbits)}
 
     def get_orbits(self):
         """
@@ -197,4 +212,7 @@ class MessengerDataset(Dataset):
         -------
         A tensor containing the class frequencies.
         """
-        return torch.tensor(self.class_dist.values, dtype=torch.float32)
+        return torch.tensor(self.class_dist.values, dtype=torch.float)
+
+    def _orbit_range(self, orbit_idx):
+        return range(self.orbit_borders[orbit_idx], self.orbit_borders[orbit_idx + 1])
