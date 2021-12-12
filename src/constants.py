@@ -34,6 +34,7 @@ HEALTH_FILE = "orbit_health.csv"
 HPARAMS_FILE = "hyperparams.yaml"
 TPARAMS_FILE = "techparams.yaml"
 METRICS_FILE = "metrics.json"
+BEST_MODEL_FILE = "best_model.pth"
 CKPT_FILE = lambda n: f"epoch_{n:02d}.pth"
 RUN_NAME = lambda n: f"{n:04d}"
 
