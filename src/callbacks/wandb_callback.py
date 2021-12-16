@@ -23,7 +23,7 @@ class WandBCallback(Callback):
     Callback for logging to the weights and biases (WandB) service during training.
     """
 
-    def __init__(self, file_pattern, class_dict):
+    def __init__(self, file_pattern, class_dict, summary_metric):
         """
         Constructs a WandB callback.
 
@@ -33,9 +33,14 @@ class WandBCallback(Callback):
             A function giving the checkpoint file name depending on the epoch number.
         class_dict: dict of str
             Dictionary giving a label for each entry in multi-valued metrics.
+        summary_metric: str
+            The name of the metric whose best value should be used as run summary.
         """
         self.file_pattern = file_pattern
         self.class_dict = class_dict
+        self.summary_metric = summary_metric
+
+        self.max_metric = float("-inf")
         self.metrics_history = defaultdict(list)
 
     def after_train_step(self, model, loss, metrics, epoch):
@@ -55,11 +60,15 @@ class WandBCallback(Callback):
         metrics = {key: val.tolist() for key, val in metrics.items()}
         self._append_history(loss, metrics)
 
+        if metrics[self.summary_metric] > self.max_metric:
+            self.max_metric = metrics[self.summary_metric]
+
         # log evaluation metrics
         wandb.log({"eval/loss": loss}, step=epoch)
         wandb.log(self._transform_metrics(metrics), step=epoch)
 
     def after_epoch(self, epoch: int):
+        wandb.run.summary[self.summary_metric] = self.max_metric
         wandb.log({})  # finally commit for this epoch
 
     def _append_history(self, loss, metrics):
