@@ -1,8 +1,11 @@
-max_epochs: 100
+# training procedure
+max_epochs: 30
 num_workers: 28
+
+# weights and biases
 wandb_dir: /root/
 wandb_enabled: true
 wandb_entity: nelorth
 wandb_group: crnn_full
-wandb_notes: 0601 with fixed kernels, no dropout and larger channels
+wandb_notes: try full with lower lr
 wandb_project: freddie

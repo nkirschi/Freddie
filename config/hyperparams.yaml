@@ -1,13 +1,22 @@
-use_orbits: 1
-eval_split: 0.3
-seed: 1337
+# data split
+train_orbits: 1
+eval_orbits: 1
+seed: 42
 
+# optimization
 batch_size: 4096
-learning_rate: 0.0001
+learning_rate: 0.00001
 optimizer: Adam
 
+# regularization
+dropout_rate: 0
+early_stopping: True
+patience: 5
+
+# model
 model_arch: CRNN
 
+# task params
 window_size: 120
 future_size: 30
 features:
@@ -21,47 +30,41 @@ features:
 - DBY_MSO
 - DBZ_MSO
 
+# MLP params
 hidden_layers: 3
 hidden_size0: 64
 hidden_size1: 64
 hidden_size2: 64
 
+# CNN params
 conv_layers: 3
 channel_size0: 128
 channel_size1: 128
 channel_size2: 128
-channel_size3: 384
-channel_size4: 512
-channel_size5: 512
-channel_size6: 512
-channel_size7: 512
-kernel_size0: 7
+channel_size3: 64
+channel_size4: 64
+kernel_size0: 3
 kernel_size1: 5
-kernel_size2: 3
+kernel_size2: 7
 kernel_size3: 3
 kernel_size4: 3
-kernel_size5: 3
-kernel_size6: 3
-kernel_size7: 3
 pool_size0: 1
 pool_size1: 1
 pool_size2: 1
 pool_size3: 1
 pool_size4: 1
-pool_size5: 1
-pool_size6: 1
-pool_size7: 1
 stride_size0: 1
 stride_size1: 1
 stride_size2: 1
 stride_size3: 1
 stride_size4: 1
-stride_size5: 1
-stride_size6: 1
-stride_size7: 1
 
-lstm_layers: 2
-lstm_size0: 32
-lstm_size1: 32
+# RNN params
+rnn_layers: 2
+rnn_state_size: 32
 
-dropout_rate: 0
+# TNN params
+transformer_encoders: 2
+transformer_decoders: 3
+transformer_dim: 64
+attention_heads: 8
