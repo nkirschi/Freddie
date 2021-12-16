@@ -17,6 +17,7 @@ DATA_DIR     = "data"    # where metadata about data is located
 LABEL_SUBDIR = "labels"  # where the label mapping is located
 RAW_SUBDIR   = "raw"     # where the raw orbit data is located
 TRAIN_SUBDIR = "train"   # where the final training data resides
+EVAL_SUBDIR  = "eval"    # where the final evaluation data resides
 TEST_SUBDIR  = "test"    # where the final testing data resides
 
 RUNS_DIR     = "runs"         # where the training run data resides
@@ -27,10 +28,10 @@ TEMP_DIR     = "temp"         # where temporary content is saved
 # important file names
 MESSENGER = lambda n: f"messenger-{n:04d}"
 ORBIT_FILE = lambda n: MESSENGER(n) + ".csv"
-LABEL_FILE = "messenger-0001_-4094_labelled.csv"
+LABEL_FILE = "labels.csv"
 STATS_FILE = "statistics.csv"
-FREQS_FILE = "class_frequencies.csv"
-HEALTH_FILE = "orbit_health.csv"
+FREQS_FILE = "classes.csv"
+VALIDITY_FILE = "validity.csv"
 HPARAMS_FILE = "hyperparams.yaml"
 TPARAMS_FILE = "techparams.yaml"
 METRICS_FILE = "metrics.json"
@@ -43,6 +44,7 @@ DATE_COL = "DATE"
 ORBIT_COL = "ORBIT"
 LABEL_COL = "LABEL"
 STAT_COL = "STAT"
+FREQ_COL = "FREQ"
 
 EVENT_COLS = list(range(1, 9))
 FLUX_COLS = ["BX_MSO", "BY_MSO", "BZ_MSO"]
