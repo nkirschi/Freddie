@@ -1,5 +1,4 @@
 import sys
-import warnings
 
 import torch
 import wandb
@@ -19,13 +18,10 @@ from callbacks.metric_logging_callback import MetricLoggingCallback
 from callbacks.wandb_callback import WandBCallback
 from fitter import Fitter
 from messenger_dataset import MessengerDataset
-from utils import ioutils as ioutils, torchutils as torchutils
+from utils import io as ioutils, torchutils as torchutils
 
 
 def define_metrics():
-    # ignore annoying memory footprint warnings from torchmetrics
-    # warnings.filterwarnings("ignore", category=UserWarning, module="torchmetrics")
-
     base_metrics = MetricCollection({
         "accuracy": Accuracy(num_classes=len(const.CLASSES),
                              compute_on_step=False,
@@ -56,12 +52,20 @@ def define_metrics():
     return train_metrics, eval_metrics
 
 
-def load_dataset(hparams):
-    return MessengerDataset(ioutils.resolve_path(const.DATA_DIR),
-                            features=hparams["features"],
-                            window_size=hparams["window_size"],
-                            future_size=hparams["future_size"],
-                            use_orbits=hparams["use_orbits"])
+def load_datasets(hparams):
+    ds_train = MessengerDataset(ioutils.resolve_path(const.DATA_DIR),
+                                split="train",
+                                features=hparams["features"],
+                                window_size=hparams["window_size"],
+                                future_size=hparams["future_size"],
+                                use_orbits=hparams["train_orbits"])
+    ds_eval = MessengerDataset(ioutils.resolve_path(const.DATA_DIR),
+                               split="eval",
+                               features=hparams["features"],
+                               window_size=hparams["window_size"],
+                               future_size=hparams["future_size"],
+                               use_orbits=hparams["eval_orbits"])
+    return ds_train, ds_eval
 
 
 def prepare_dataloaders(ds_train, ds_eval, hparams, tparams):
@@ -113,7 +117,7 @@ def construct_model(hparams):
                 attention_heads=hparams["attention_heads"])
 
 
-def perform_train(model, ds, dl_train, dl_eval, hparams, tparams):
+def perform_train(model, hparams, tparams):
     # initialize training environment
     run_path, run_id = ioutils.create_run_directory(hparams)
 
@@ -138,6 +142,11 @@ def perform_train(model, ds, dl_train, dl_eval, hparams, tparams):
     print("technical parameters:")
     print(tparams)
 
+    # prepare dataloaders
+    print("Loading dataset...")
+    ds_train, ds_eval = load_datasets(hparams)
+    dl_train, dl_eval = prepare_dataloaders(ds_train, ds_eval, hparams, tparams)
+
     # let WandB track the model parameters and gradients
     if tparams["wandb_enabled"]:
         wandb.watch(model, log="all")
@@ -147,7 +156,7 @@ def perform_train(model, ds, dl_train, dl_eval, hparams, tparams):
     summary(model, input_size=(hparams["batch_size"], len(hparams["features"]), hparams["window_size"]))
 
     # define optimization criterion
-    class_dist = ds.get_class_frequencies()
+    class_dist = ds_train.get_class_frequencies()
     weights = sum(class_dist) / class_dist
     criterion = CrossEntropyLoss(weight=weights)
 
@@ -158,17 +167,22 @@ def perform_train(model, ds, dl_train, dl_eval, hparams, tparams):
     # define evaluation metrics
     train_metrics, eval_metrics = define_metrics()
 
+    # prepare training hooks
+    callbacks = [MetricLoggingCallback(run_path / const.METRICS_FILE),
+                 BestModelCallback(run_path / const.BEST_MODEL_FILE),
+                 CheckpointingCallback(run_path / const.CKPT_SUBDIR, const.CKPT_FILE)]
+    if tparams["wandb_enabled"]:
+        callbacks.append(WandBCallback(const.CKPT_FILE, const.CLASSES, summary_metric="eval/macro_f1"))
+    if hparams["early_stopping"]:
+        callbacks.append(EarlyStoppingCallback(patience=hparams["patience"]))
+
     # fit the model to the training set
     fitter = Fitter(optimizer, criterion, train_metrics, eval_metrics,
                     max_epochs=tparams["max_epochs"],
                     log_every=10,
                     train_device="cuda",
                     eval_device="cuda",
-                    callbacks=[MetricLoggingCallback(run_path / const.METRICS_FILE),
-                               BestModelCallback(run_path / const.BEST_MODEL_FILE),
-                               CheckpointingCallback(run_path / const.CKPT_SUBDIR, const.CKPT_FILE),
-                               WandBCallback(const.CKPT_FILE, const.CLASSES),
-                               EarlyStoppingCallback(patience=3)])
+                    callbacks=callbacks)
     fitter.fit(model, dl_train, dl_eval)
 
     model.load_state_dict(torch.load(run_path / const.BEST_MODEL_FILE))
