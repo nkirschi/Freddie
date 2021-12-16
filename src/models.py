@@ -71,6 +71,20 @@ def build_conv_stack(in_size, channel_sizes, kernel_sizes, stride_sizes, pool_si
     return nn.Sequential(*conv_stack)
 
 
+def build_lstm_stack(in_size, out_size, state_sizes, dropout_rate):
+    lstm_stack = []
+    state_sizes = [in_size / 2] + state_sizes + [out_size]
+    for i in range(len(state_sizes) - 1):
+        lstm_stack.append(nn.LSTM(input_size=2 * state_sizes[i],
+                                  hidden_size=state_sizes[i + 1],
+                                  bidirectional=True,
+                                  batch_first=True,
+                                  dropout=dropout_rate
+                                  ))
+    lstm_stack.append(nn.Linear(2 * state_sizes[-1], out_size))
+    return nn.Sequential(*lstm_stack)
+
+
 def determine_conv_out_size(initial_size, kernel_sizes, stride_sizes, pool_sizes):
     if len(kernel_sizes) == 0:
         return initial_size
