@@ -245,3 +245,30 @@ class CRNN(FreddieModel):
         x = self.swap_last2(x)
 
         return x
+
+
+class TNN(nn.Module):
+
+    def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        super().__init__()
+
+        self.zero_pad = nn.ConstantPad1d((0, 0, 0, future_size), 0)
+        self.swap_last1 = SwapLast()
+        self.embed = nn.Linear(num_channels, kwargs["transformer_dim"])
+        self.transformer = nn.Transformer(d_model=kwargs["transformer_dim"],
+                                          nhead=kwargs["attention_heads"],
+                                          batch_first=True,
+                                          dim_feedforward=kwargs["transformer_dim"],
+                                          num_encoder_layers=kwargs["transformer_encoders"],
+                                          num_decoder_layers=kwargs["transformer_decoders"])
+        self.debed = nn.Linear(kwargs["transformer_dim"], num_classes)
+        self.swap_last2 = SwapLast()
+
+    def forward(self, x):
+        x = self.swap_last1(x)
+        x = self.embed(x)
+        x = self.transformer(x, self.zero_pad(x))
+        x = self.debed(x)
+        x = self.swap_last2(x)
+
+        return x
