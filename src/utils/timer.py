@@ -8,7 +8,7 @@ __license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
-__status__ = "Prototype"
+__status__ = "Production"
 
 
 import time
@@ -35,6 +35,7 @@ class Timer:
 
     def start(self):
         """Starts the timer immediately."""
+
         if self._time is not None:
             raise ValueError("Timer is already running. You need to .stop() it first!")
 
@@ -42,6 +43,7 @@ class Timer:
 
     def stop(self):
         """Stops the timer and report elapsed time."""
+
         if self._time is None:
             raise ValueError("Timer is not running. You need to .start() it first!")
 
@@ -51,9 +53,11 @@ class Timer:
 
     def __enter__(self):
         """Starts timer as context manager."""
+
         self.start()
         return self
 
     def __exit__(self, *exc_info):
         """Stops context-managed timer."""
+
         self.stop()
