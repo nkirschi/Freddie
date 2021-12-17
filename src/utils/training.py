@@ -111,6 +111,7 @@ def construct_model(hparams):
                 rnn_layers=hparams["rnn_layers"],
                 rnn_state_size=hparams["rnn_state_size"],
                 dropout_rate=hparams["dropout_rate"],
+                batch_normalization=hparams["batch_normalization"],
                 transformer_encoders=hparams["transformer_encoders"],
                 transformer_decoders=hparams["transformer_decoders"],
                 transformer_dim=hparams["transformer_dim"],

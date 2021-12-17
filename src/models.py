@@ -43,7 +43,7 @@ class FreddieModel(nn.Module, ABC):
 
 # TODO move these utility methods to a separate file
 
-def build_linear_stack(in_size, out_size, hidden_sizes, dropout_rate):
+def build_linear_stack(in_size, out_size, hidden_sizes, dropout_rate, batch_normalization):
     linear_stack = []
     hidden_sizes = [in_size] + hidden_sizes
     for i in range(len(hidden_sizes) - 1):
@@ -51,11 +51,13 @@ def build_linear_stack(in_size, out_size, hidden_sizes, dropout_rate):
         if dropout_rate > 0:
             linear_stack.append(nn.Dropout(dropout_rate))
         linear_stack.append(nn.ReLU())
+        if batch_normalization:
+            linear_stack.append(nn.BatchNorm1d(hidden_sizes[i + 1]))
     linear_stack.append(nn.Linear(hidden_sizes[-1], out_size))
     return nn.Sequential(*linear_stack)
 
 
-def build_conv_stack(in_size, channel_sizes, kernel_sizes, stride_sizes, pool_sizes, dropout_rate):
+def build_conv_stack(in_size, channel_sizes, kernel_sizes, stride_sizes, pool_sizes, dropout_rate, batch_normalization):
     conv_stack = []
     channel_sizes = [in_size] + channel_sizes
     for i in range(len(channel_sizes) - 1):
@@ -66,12 +68,14 @@ def build_conv_stack(in_size, channel_sizes, kernel_sizes, stride_sizes, pool_si
         if dropout_rate > 0:
             conv_stack.append(nn.Dropout(dropout_rate))
         conv_stack.append(nn.ReLU())
+        if batch_normalization:
+            conv_stack.append(nn.BatchNorm1d(channel_sizes[i + 1]))
         if pool_sizes[i] > 1:
             conv_stack.append(nn.MaxPool1d(pool_sizes[i]))
     return nn.Sequential(*conv_stack)
 
 
-def build_lstm_stack(in_size, out_size, state_sizes, dropout_rate):
+def build_lstm_stack(in_size, out_size, state_sizes, sequence_length, dropout_rate, batch_normalization):
     lstm_stack = []
     state_sizes = [in_size / 2] + state_sizes + [out_size]
     for i in range(len(state_sizes) - 1):
@@ -81,6 +85,8 @@ def build_lstm_stack(in_size, out_size, state_sizes, dropout_rate):
                                   batch_first=True,
                                   dropout=dropout_rate
                                   ))
+        if batch_normalization:
+            lstm_stack.append(nn.BatchNorm1d(sequence_length))
     lstm_stack.append(nn.Linear(2 * state_sizes[-1], out_size))
     return nn.Sequential(*lstm_stack)
 
@@ -107,7 +113,8 @@ class MLP(FreddieModel):
         self.hidden_stack = build_linear_stack(self.in_shape[0] * self.in_shape[1],
                                                self.out_shape[0] * self.out_shape[1],
                                                kwargs["hidden_sizes"],
-                                               kwargs["dropout_rate"])
+                                               kwargs["dropout_rate"],
+                                               kwargs["batch_normalization"])
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
@@ -138,12 +145,14 @@ class CNN(FreddieModel):
                                            kwargs["kernel_sizes"],
                                            kwargs["stride_sizes"],
                                            kwargs["pool_sizes"],
-                                           kwargs["dropout_rate"])
+                                           kwargs["dropout_rate"],
+                                           kwargs["batch_normalization"])
         self.flatten = nn.Flatten(-2, -1)
         self.linear_stack = build_linear_stack(kwargs["channel_sizes"][-1] * conv_out_size,
                                                self.out_shape[0] * self.out_shape[1],
                                                kwargs["hidden_sizes"],
-                                               kwargs["dropout_rate"])
+                                               kwargs["dropout_rate"],
+                                               kwargs["batch_normalization"])
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
@@ -171,7 +180,8 @@ class FCN(FreddieModel):
                                            kwargs["kernel_sizes"],
                                            kwargs["stride_sizes"],
                                            kwargs["pool_sizes"],
-                                           kwargs["dropout_rate"])
+                                           kwargs["dropout_rate"],
+                                           kwargs["batch_normalization"])
         self.out_conv = nn.Conv1d(kwargs["channel_sizes"][-1],
                                   self.out_shape[0] * self.out_shape[1],
                                   kernel_size=(1,))
@@ -237,7 +247,8 @@ class CRNN(FreddieModel):
                                            kwargs["kernel_sizes"],
                                            kwargs["stride_sizes"],
                                            kwargs["pool_sizes"],
-                                           kwargs["dropout_rate"])
+                                           kwargs["dropout_rate"],
+                                           kwargs["batch_normalization"])
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
         self.swap_last1 = SwapLast()
         self.lstm = nn.LSTM(input_size=kwargs["channel_sizes"][-1],

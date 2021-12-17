@@ -10,6 +10,7 @@ optimizer: Adam
 
 # regularization
 dropout_rate: 0
+batch_normalization: True
 early_stopping: True
 patience: 5
 
