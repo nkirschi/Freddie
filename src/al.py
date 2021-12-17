@@ -17,6 +17,8 @@ import heapq
 import torch
 
 from torch.nn.functional import softmax
+
+import utils.training
 from utils import torchutils, training
 from utils.timer import Timer
 
@@ -34,7 +36,7 @@ def orbit_confidence(preds: torch.Tensor):
 
 
 hparams, tparams = training.load_config()
-torchutils.apply_global_seed(hparams["seed"])
+utils.training.apply_global_seed(hparams["seed"])
 
 ds = training.load_dataset(hparams)
 orbits = {k: torch.stack([sample for sample, label in v if 1 in label or 3 in label]) for k, v in ds.explode_orbits().items()}

@@ -1,16 +1,17 @@
-import sys
-
-import torch
-import wandb
-
-import yaml
-from torch.nn import CrossEntropyLoss
-from torch.utils.data import DataLoader
-from torchinfo import summary
-from torchmetrics import Accuracy, F1, MetricCollection
+"""
+Utility functions for training runs.
+"""
 
 import constants as const
 import models
+import numpy as np
+import os
+import random
+import sys
+import torch
+import yaml
+import wandb
+
 from callbacks.best_model_callback import BestModelCallback
 from callbacks.checkpointing_callback import CheckpointingCallback
 from callbacks.early_stopping_callback import EarlyStoppingCallback
@@ -18,7 +19,28 @@ from callbacks.metric_logging_callback import MetricLoggingCallback
 from callbacks.wandb_callback import WandBCallback
 from fitter import Fitter
 from messenger_dataset import MessengerDataset
+from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader
+from torchinfo import summary
+from torchmetrics import Accuracy, F1, MetricCollection
 from utils import io as ioutils, torchutils as torchutils
+
+
+# see https://gist.github.com/ihoromi4/b681a9088f348942b01711f251e5f964
+def apply_global_seed(seed: int):
+    """
+    Applies the same seed to all libraries that make use of randomness and enforces deterministic GPU computation.
+    """
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
+    random.seed(seed)
+    np.random.seed(seed)
+
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
 
 
 def define_metrics():
@@ -122,7 +144,7 @@ def perform_train(model, hparams, tparams):
     run_path, run_id = ioutils.create_run_directory(hparams)
 
     # apply the same seed to all libraries for reproducability
-    torchutils.apply_global_seed(hparams["seed"])
+    apply_global_seed(hparams["seed"])
 
     # set up connection the WandB service
     if tparams["wandb_enabled"]:
