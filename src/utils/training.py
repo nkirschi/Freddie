@@ -142,11 +142,6 @@ def perform_train(model, hparams, tparams):
     print("technical parameters:")
     print(tparams)
 
-    # prepare dataloaders
-    print("Loading dataset...")
-    ds_train, ds_eval = load_datasets(hparams)
-    dl_train, dl_eval = prepare_dataloaders(ds_train, ds_eval, hparams, tparams)
-
     # let WandB track the model parameters and gradients
     if tparams["wandb_enabled"]:
         wandb.watch(model, log="all")
@@ -154,6 +149,11 @@ def perform_train(model, hparams, tparams):
     # print important info about the model
     print(model)
     summary(model, input_size=(hparams["batch_size"], len(hparams["features"]), hparams["window_size"]))
+
+    # prepare dataloaders
+    print("Loading dataset...")
+    ds_train, ds_eval = load_datasets(hparams)
+    dl_train, dl_eval = prepare_dataloaders(ds_train, ds_eval, hparams, tparams)
 
     # define optimization criterion
     class_dist = ds_train.get_class_frequencies()
