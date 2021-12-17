@@ -16,10 +16,16 @@ __status__ = "Prototype"
 import torch.nn as nn
 
 from abc import ABC, abstractmethod
-from utils.swap_last import SwapLast
+from math import prod
+
+from modules.transposer import Transpose
+from modules.linear_stack import LinearStack
+from modules.conv_stack import ConvStack
+from modules.recurrent_stack import RecurrentStack
 
 
 ################################################################################
+
 
 class FreddieModel(nn.Module, ABC):
     """
@@ -41,65 +47,6 @@ class FreddieModel(nn.Module, ABC):
 
 ################################################################################
 
-# TODO move these utility methods to a separate file
-
-def build_linear_stack(in_size, out_size, hidden_sizes, dropout_rate, batch_normalization):
-    linear_stack = []
-    hidden_sizes = [in_size] + hidden_sizes
-    for i in range(len(hidden_sizes) - 1):
-        linear_stack.append(nn.Linear(hidden_sizes[i], hidden_sizes[i + 1]))
-        if dropout_rate > 0:
-            linear_stack.append(nn.Dropout(dropout_rate))
-        linear_stack.append(nn.ReLU())
-        if batch_normalization:
-            linear_stack.append(nn.BatchNorm1d(hidden_sizes[i + 1]))
-    linear_stack.append(nn.Linear(hidden_sizes[-1], out_size))
-    return nn.Sequential(*linear_stack)
-
-
-def build_conv_stack(in_size, channel_sizes, kernel_sizes, stride_sizes, pool_sizes, dropout_rate, batch_normalization):
-    conv_stack = []
-    channel_sizes = [in_size] + channel_sizes
-    for i in range(len(channel_sizes) - 1):
-        conv_stack.append(nn.Conv1d(channel_sizes[i], channel_sizes[i + 1],
-                                    kernel_size=(kernel_sizes[i],),
-                                    stride=(stride_sizes[i],),
-                                    padding=kernel_sizes[i] // 2))
-        if dropout_rate > 0:
-            conv_stack.append(nn.Dropout(dropout_rate))
-        conv_stack.append(nn.ReLU())
-        if batch_normalization:
-            conv_stack.append(nn.BatchNorm1d(channel_sizes[i + 1]))
-        if pool_sizes[i] > 1:
-            conv_stack.append(nn.MaxPool1d(pool_sizes[i]))
-    return nn.Sequential(*conv_stack)
-
-
-def build_lstm_stack(in_size, out_size, state_sizes, sequence_length, dropout_rate, batch_normalization):
-    lstm_stack = []
-    state_sizes = [in_size / 2] + state_sizes + [out_size]
-    for i in range(len(state_sizes) - 1):
-        lstm_stack.append(nn.LSTM(input_size=2 * state_sizes[i],
-                                  hidden_size=state_sizes[i + 1],
-                                  bidirectional=True,
-                                  batch_first=True,
-                                  dropout=dropout_rate
-                                  ))
-        if batch_normalization:
-            lstm_stack.append(nn.BatchNorm1d(sequence_length))
-    lstm_stack.append(nn.Linear(2 * state_sizes[-1], out_size))
-    return nn.Sequential(*lstm_stack)
-
-
-def determine_conv_out_size(initial_size, kernel_sizes, stride_sizes, pool_sizes):
-    if len(kernel_sizes) == 0:
-        return initial_size
-
-    in_size = determine_conv_out_size(initial_size, kernel_sizes[:-1], stride_sizes[:-1], pool_sizes[:-1])
-    return ((in_size - kernel_sizes[-1] % 2) // stride_sizes[-1] + 1) // pool_sizes[-1]
-
-
-################################################################################
 
 class MLP(FreddieModel):
     """
@@ -110,11 +57,11 @@ class MLP(FreddieModel):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.flatten = nn.Flatten(-2, -1)
-        self.hidden_stack = build_linear_stack(self.in_shape[0] * self.in_shape[1],
-                                               self.out_shape[0] * self.out_shape[1],
-                                               kwargs["hidden_sizes"],
-                                               kwargs["dropout_rate"],
-                                               kwargs["batch_normalization"])
+        self.hidden_stack = LinearStack(prod(self.in_shape),
+                                        prod(self.out_shape),
+                                        kwargs["hidden_sizes"],
+                                        kwargs["dropout_rate"],
+                                        kwargs["batch_normalization"])
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
@@ -127,6 +74,7 @@ class MLP(FreddieModel):
 
 ################################################################################
 
+
 class CNN(FreddieModel):
     """
     Standard CNN with 1D convolutions, optional pooling and optional dropout.
@@ -135,24 +83,20 @@ class CNN(FreddieModel):
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
-        conv_out_size = determine_conv_out_size(window_size,
-                                                kwargs["kernel_sizes"],
-                                                kwargs["stride_sizes"],
-                                                kwargs["pool_sizes"])
-
-        self.conv_stack = build_conv_stack(num_channels,
-                                           kwargs["channel_sizes"],
-                                           kwargs["kernel_sizes"],
-                                           kwargs["stride_sizes"],
-                                           kwargs["pool_sizes"],
-                                           kwargs["dropout_rate"],
-                                           kwargs["batch_normalization"])
+        self.conv_stack = ConvStack(num_channels,
+                                    window_size,
+                                    kwargs["channel_sizes"],
+                                    kwargs["kernel_sizes"],
+                                    kwargs["stride_sizes"],
+                                    kwargs["pool_sizes"],
+                                    kwargs["dropout_rate"],
+                                    kwargs["batch_normalization"])
         self.flatten = nn.Flatten(-2, -1)
-        self.linear_stack = build_linear_stack(kwargs["channel_sizes"][-1] * conv_out_size,
-                                               self.out_shape[0] * self.out_shape[1],
-                                               kwargs["hidden_sizes"],
-                                               kwargs["dropout_rate"],
-                                               kwargs["batch_normalization"])
+        self.linear_stack = LinearStack(prod(self.conv_stack.output_size()),
+                                        prod(self.out_shape),
+                                        kwargs["hidden_sizes"],
+                                        kwargs["dropout_rate"],
+                                        kwargs["batch_normalization"])
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
@@ -175,20 +119,18 @@ class FCN(FreddieModel):
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
-        self.conv_stack = build_conv_stack(num_channels,
-                                           kwargs["channel_sizes"],
-                                           kwargs["kernel_sizes"],
-                                           kwargs["stride_sizes"],
-                                           kwargs["pool_sizes"],
-                                           kwargs["dropout_rate"],
-                                           kwargs["batch_normalization"])
+        self.conv_stack = ConvStack(num_channels,
+                                    window_size,
+                                    kwargs["channel_sizes"],
+                                    kwargs["kernel_sizes"],
+                                    kwargs["stride_sizes"],
+                                    kwargs["pool_sizes"],
+                                    kwargs["dropout_rate"],
+                                    kwargs["batch_normalization"])
         self.out_conv = nn.Conv1d(kwargs["channel_sizes"][-1],
                                   self.out_shape[0] * self.out_shape[1],
                                   kernel_size=(1,))
-        self.gap = nn.AvgPool1d(determine_conv_out_size(window_size,
-                                                        kwargs["kernel_sizes"],
-                                                        kwargs["stride_sizes"],
-                                                        kwargs["pool_sizes"]))
+        self.gap = nn.AvgPool1d(self.conv_stack.output_size()[1])
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
@@ -202,6 +144,7 @@ class FCN(FreddieModel):
 
 ################################################################################
 
+
 class RNN(FreddieModel):
     """
     Basic RNN consisting of a stack of long short-term memory (LSTM) modules.
@@ -211,28 +154,26 @@ class RNN(FreddieModel):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
-        self.swap_in = SwapLast()
-        self.lstm = nn.LSTM(input_size=num_channels,
-                            hidden_size=kwargs["rnn_state_size"],
-                            bidirectional=True,
-                            batch_first=True,
-                            num_layers=kwargs["rnn_layers"],
-                            dropout=kwargs["dropout_rate"]
-                            )
-        self.fc = nn.Linear(2 * kwargs["rnn_state_size"], num_classes)
-        self.swap_out = SwapLast()
+        self.swap_in = Transpose(-1, -2)
+        self.lstm_stack = RecurrentStack(num_channels,
+                                         num_classes,
+                                         window_size + future_size,
+                                         kwargs["state_sizes"],
+                                         kwargs["dropout_rate"],
+                                         kwargs["batch_normalization"])
+        self.swap_out = Transpose(-1, -2)
 
     def forward(self, x):
         x = self.zero_pad(x)
         x = self.swap_in(x)
-        x = self.lstm(x)[0]
-        x = self.fc(x)
+        x = self.lstm_stack(x)
         x = self.swap_out(x)
 
         return x
 
 
 ################################################################################
+
 
 class CRNN(FreddieModel):
     """
@@ -242,43 +183,47 @@ class CRNN(FreddieModel):
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
-        self.conv_stack = build_conv_stack(num_channels,
-                                           kwargs["channel_sizes"],
-                                           kwargs["kernel_sizes"],
-                                           kwargs["stride_sizes"],
-                                           kwargs["pool_sizes"],
-                                           kwargs["dropout_rate"],
-                                           kwargs["batch_normalization"])
+        self.conv_stack = ConvStack(num_channels,
+                                    window_size,
+                                    kwargs["channel_sizes"],
+                                    kwargs["kernel_sizes"],
+                                    kwargs["stride_sizes"],
+                                    kwargs["pool_sizes"],
+                                    kwargs["dropout_rate"],
+                                    kwargs["batch_normalization"])
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
-        self.swap_last1 = SwapLast()
-        self.lstm = nn.LSTM(input_size=kwargs["channel_sizes"][-1],
-                            hidden_size=kwargs["rnn_state_size"],
-                            bidirectional=True,
-                            batch_first=True,
-                            num_layers=kwargs["rnn_layers"],
-                            dropout=kwargs["dropout_rate"]
-                            )
-        self.fc = nn.Linear(2 * kwargs["rnn_state_size"], num_classes)
-        self.swap_last2 = SwapLast()
+        self.swap_last1 = Transpose(-1, -2)
+        self.lstm_stack = RecurrentStack(self.conv_stack.output_size()[0],
+                                         num_classes,
+                                         self.conv_stack.output_size()[1] + future_size,
+                                         kwargs["state_sizes"],
+                                         kwargs["dropout_rate"],
+                                         kwargs["batch_normalization"])
+        self.swap_last2 = Transpose(-1, -2)
 
     def forward(self, x):
         x = self.conv_stack(x)
         x = self.zero_pad(x)
         x = self.swap_last1(x)
-        x = self.lstm(x)[0]
-        x = self.fc(x)
+        x = self.lstm_stack(x)
         x = self.swap_last2(x)
 
         return x
 
 
-class TNN(nn.Module):
+################################################################################
+
+
+class TNN(FreddieModel):
+    """
+    Transformer model.
+    """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
-        super().__init__()
+        super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.zero_pad = nn.ConstantPad1d((0, 0, 0, future_size), 0)
-        self.swap_last1 = SwapLast()
+        self.swap_last1 = Transpose(-1, -2)
         self.embed = nn.Linear(num_channels, kwargs["transformer_dim"])
         self.transformer = nn.Transformer(d_model=kwargs["transformer_dim"],
                                           nhead=kwargs["attention_heads"],
@@ -287,7 +232,7 @@ class TNN(nn.Module):
                                           num_encoder_layers=kwargs["transformer_encoders"],
                                           num_decoder_layers=kwargs["transformer_decoders"])
         self.debed = nn.Linear(kwargs["transformer_dim"], num_classes)
-        self.swap_last2 = SwapLast()
+        self.swap_last2 = Transpose(-1, -2)
 
     def forward(self, x):
         x = self.swap_last1(x)
