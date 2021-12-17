@@ -34,4 +34,4 @@ class Transpose(nn.Module):
         return x.transpose(self.dim1, self.dim2)
 
     def __repr__(self):
-        return f"Transpose(dim1={self.dim1}, dim2={self.dim2})"
+        return f"Transposer(dim1={self.dim1}, dim2={self.dim2})"
