@@ -1,9 +1,10 @@
-from torch import nn
+import torch.nn as nn
 
 
 class ConvStack(nn.Sequential):
 
-    def __init__(self, in_size, seq_len, channel_sizes, kernel_sizes, stride_sizes, pool_sizes, dropout_rate, use_bn):
+    def __init__(self, in_size, seq_len, channel_sizes, kernel_sizes, stride_sizes, dilation_sizes, pool_sizes,
+                 dropout_rate, use_bn):
         super().__init__()
 
         self.out_len = seq_len
@@ -13,7 +14,8 @@ class ConvStack(nn.Sequential):
             self.add_module(f"conv{i}", nn.Conv1d(channel_sizes[i], channel_sizes[i + 1],
                                                   kernel_size=(kernel_sizes[i],),
                                                   stride=(stride_sizes[i],),
-                                                  padding=kernel_sizes[i] // 2))
+                                                  padding=kernel_sizes[i] // 2 * dilation_sizes[i],
+                                                  dilation=(dilation_sizes[i],)))
             if dropout_rate > 0:
                 self.add_module(f"dropout{i}", nn.Dropout(dropout_rate))
             self.add_module(f"relu{i}", nn.ReLU())

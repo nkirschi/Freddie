@@ -18,10 +18,11 @@ import torch.nn as nn
 from abc import ABC, abstractmethod
 from math import prod
 
-from modules.transposer import Transpose
-from modules.linear_stack import LinearStack
-from modules.conv_stack import ConvStack
-from modules.recurrent_stack import RecurrentStack
+from modules.tensor.transposer import Transpose
+from modules.stack.linear_stack import LinearStack
+from modules.stack.convolutional_stack import ConvStack
+from modules.stack.recurrent_stack import RecurrentStack
+from modules.stack.attentional_stack import AttentionalStack
 
 
 ################################################################################
@@ -50,18 +51,18 @@ class FreddieModel(nn.Module, ABC):
 
 class MLP(FreddieModel):
     """
-    Simple multi-layer perceptron with ReLU activations and optional dropout.
+    Simple multi-layer perceptron with ReLU activations and optional regularization.
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.flatten = nn.Flatten(-2, -1)
-        self.hidden_stack = LinearStack(prod(self.in_shape),
-                                        prod(self.out_shape),
-                                        kwargs["hidden_sizes"],
-                                        kwargs["dropout_rate"],
-                                        kwargs["batch_normalization"])
+        self.hidden_stack = LinearStack(in_size=prod(self.in_shape),
+                                        out_size=prod(self.out_shape),
+                                        hidden_sizes=kwargs["hidden_sizes"],
+                                        dropout_rate=kwargs["dropout_rate"],
+                                        use_bn=kwargs["batch_normalization"])
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
@@ -83,20 +84,21 @@ class CNN(FreddieModel):
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
-        self.conv_stack = ConvStack(num_channels,
-                                    window_size,
-                                    kwargs["channel_sizes"],
-                                    kwargs["kernel_sizes"],
-                                    kwargs["stride_sizes"],
-                                    kwargs["pool_sizes"],
-                                    kwargs["dropout_rate"],
-                                    kwargs["batch_normalization"])
+        self.conv_stack = ConvStack(in_size=num_channels,
+                                    seq_len=window_size,
+                                    channel_sizes=kwargs["channel_sizes"],
+                                    kernel_sizes=kwargs["kernel_sizes"],
+                                    stride_sizes=kwargs["stride_sizes"],
+                                    dilation_sizes=kwargs["dilation_sizes"],
+                                    pool_sizes=kwargs["pool_sizes"],
+                                    dropout_rate=kwargs["dropout_rate"],
+                                    use_bn=kwargs["batch_normalization"])
         self.flatten = nn.Flatten(-2, -1)
-        self.linear_stack = LinearStack(prod(self.conv_stack.output_size()),
-                                        prod(self.out_shape),
-                                        kwargs["hidden_sizes"],
-                                        kwargs["dropout_rate"],
-                                        kwargs["batch_normalization"])
+        self.linear_stack = LinearStack(in_size=prod(self.conv_stack.output_size()),
+                                        out_size=prod(self.out_shape),
+                                        hidden_sizes=kwargs["hidden_sizes"],
+                                        dropout_rate=kwargs["dropout_rate"],
+                                        use_bn=kwargs["batch_normalization"])
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
@@ -119,14 +121,15 @@ class FCN(FreddieModel):
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
-        self.conv_stack = ConvStack(num_channels,
-                                    window_size,
-                                    kwargs["channel_sizes"],
-                                    kwargs["kernel_sizes"],
-                                    kwargs["stride_sizes"],
-                                    kwargs["pool_sizes"],
-                                    kwargs["dropout_rate"],
-                                    kwargs["batch_normalization"])
+        self.conv_stack = ConvStack(in_size=num_channels,
+                                    seq_len=window_size,
+                                    channel_sizes=kwargs["channel_sizes"],
+                                    kernel_sizes=kwargs["kernel_sizes"],
+                                    stride_sizes=kwargs["stride_sizes"],
+                                    dilation_sizes=kwargs["dilation_sizes"],
+                                    pool_sizes=kwargs["pool_sizes"],
+                                    dropout_rate=kwargs["dropout_rate"],
+                                    use_bn=kwargs["batch_normalization"])
         self.out_conv = nn.Conv1d(kwargs["channel_sizes"][-1],
                                   self.out_shape[0] * self.out_shape[1],
                                   kernel_size=(1,))
@@ -155,12 +158,12 @@ class RNN(FreddieModel):
 
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
         self.swap_in = Transpose(-1, -2)
-        self.lstm_stack = RecurrentStack(num_channels,
-                                         num_classes,
-                                         window_size + future_size,
-                                         kwargs["state_sizes"],
-                                         kwargs["dropout_rate"],
-                                         kwargs["batch_normalization"])
+        self.lstm_stack = RecurrentStack(in_size=num_channels,
+                                         out_size=num_classes,
+                                         seq_len=window_size + future_size,
+                                         state_sizes=kwargs["state_sizes"],
+                                         dropout_rate=kwargs["dropout_rate"],
+                                         use_bn=kwargs["batch_normalization"])
         self.swap_out = Transpose(-1, -2)
 
     def forward(self, x):
@@ -183,30 +186,31 @@ class CRNN(FreddieModel):
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
-        self.conv_stack = ConvStack(num_channels,
-                                    window_size,
-                                    kwargs["channel_sizes"],
-                                    kwargs["kernel_sizes"],
-                                    kwargs["stride_sizes"],
-                                    kwargs["pool_sizes"],
-                                    kwargs["dropout_rate"],
-                                    kwargs["batch_normalization"])
+        self.conv_stack = ConvStack(in_size=num_channels,
+                                    seq_len=window_size,
+                                    channel_sizes=kwargs["channel_sizes"],
+                                    kernel_sizes=kwargs["kernel_sizes"],
+                                    stride_sizes=kwargs["stride_sizes"],
+                                    dilation_sizes=kwargs["dilation_sizes"],
+                                    pool_sizes=kwargs["pool_sizes"],
+                                    dropout_rate=kwargs["dropout_rate"],
+                                    use_bn=kwargs["batch_normalization"])
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
-        self.swap_last1 = Transpose(-1, -2)
-        self.lstm_stack = RecurrentStack(self.conv_stack.output_size()[0],
-                                         num_classes,
-                                         self.conv_stack.output_size()[1] + future_size,
-                                         kwargs["state_sizes"],
-                                         kwargs["dropout_rate"],
-                                         kwargs["batch_normalization"])
-        self.swap_last2 = Transpose(-1, -2)
+        self.swap_in = Transpose(-1, -2)
+        self.lstm_stack = RecurrentStack(in_size=kwargs["channel_sizes"][-1],
+                                         out_size=num_classes,
+                                         seq_len=self.conv_stack.output_size()[1] + future_size,
+                                         state_sizes=kwargs["state_sizes"],
+                                         dropout_rate=kwargs["dropout_rate"],
+                                         use_bn=kwargs["batch_normalization"])
+        self.swap_out = Transpose(-1, -2)
 
     def forward(self, x):
         x = self.conv_stack(x)
         x = self.zero_pad(x)
-        x = self.swap_last1(x)
+        x = self.swap_in(x)
         x = self.lstm_stack(x)
-        x = self.swap_last2(x)
+        x = self.swap_out(x)
 
         return x
 
@@ -214,31 +218,45 @@ class CRNN(FreddieModel):
 ################################################################################
 
 
-class TNN(FreddieModel):
+class ACRNN(FreddieModel):
     """
-    Transformer model.
+    Attentional convolutional recurrent network.
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
         super().__init__(num_channels, window_size, future_size, num_classes)
 
-        self.zero_pad = nn.ConstantPad1d((0, 0, 0, future_size), 0)
-        self.swap_last1 = Transpose(-1, -2)
-        self.embed = nn.Linear(num_channels, kwargs["transformer_dim"])
-        self.transformer = nn.Transformer(d_model=kwargs["transformer_dim"],
-                                          nhead=kwargs["attention_heads"],
-                                          batch_first=True,
-                                          dim_feedforward=kwargs["transformer_dim"],
-                                          num_encoder_layers=kwargs["transformer_encoders"],
-                                          num_decoder_layers=kwargs["transformer_decoders"])
-        self.debed = nn.Linear(kwargs["transformer_dim"], num_classes)
-        self.swap_last2 = Transpose(-1, -2)
+        self.conv_stack = ConvStack(in_size=num_channels,
+                                    seq_len=window_size,
+                                    channel_sizes=kwargs["channel_sizes"],
+                                    kernel_sizes=kwargs["kernel_sizes"],
+                                    stride_sizes=kwargs["stride_sizes"],
+                                    dilation_sizes=kwargs["dilation_sizes"],
+                                    pool_sizes=kwargs["pool_sizes"],
+                                    dropout_rate=kwargs["dropout_rate"],
+                                    use_bn=kwargs["batch_normalization"])
+        self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
+        self.swap_in = Transpose(-1, -2)
+        self.lstm_stack = RecurrentStack(in_size=kwargs["channel_sizes"][-1],
+                                         out_size=kwargs["attn_sizes"][0],
+                                         seq_len=self.conv_stack.output_size()[1] + future_size,
+                                         state_sizes=kwargs["state_sizes"],
+                                         dropout_rate=kwargs["dropout_rate"],
+                                         use_bn=kwargs["batch_normalization"])
+        self.attn_stack = AttentionalStack(out_size=num_classes,
+                                           seq_len=self.conv_stack.output_size()[1] + future_size,
+                                           attn_sizes=kwargs["attn_sizes"],
+                                           head_sizes=kwargs["head_sizes"],
+                                           dropout_rate=kwargs["dropout_rate"],
+                                           use_bn=kwargs["batch_normalization"])
+        self.swap_out = Transpose(-1, -2)
 
     def forward(self, x):
-        x = self.swap_last1(x)
-        x = self.embed(x)
-        x = self.transformer(x, self.zero_pad(x))
-        x = self.debed(x)
-        x = self.swap_last2(x)
+        x = self.conv_stack(x)
+        x = self.zero_pad(x)
+        x = self.swap_in(x)
+        x = self.lstm_stack(x)
+        x = self.attn_stack(x)
+        x = self.swap_out(x)
 
         return x

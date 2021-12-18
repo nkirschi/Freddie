@@ -1,10 +1,11 @@
-from torch import nn
+import torch.nn as nn
 
 
 class LinearStack(nn.Sequential):
 
     def __init__(self, in_size, out_size, hidden_sizes, dropout_rate, use_bn):
         super().__init__()
+
         hidden_sizes = [in_size] + hidden_sizes
         for i in range(len(hidden_sizes) - 1):
             self.add_module(f"linear{i}", nn.Linear(hidden_sizes[i], hidden_sizes[i + 1]))
