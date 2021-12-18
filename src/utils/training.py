@@ -181,6 +181,7 @@ def perform_train(model, hparams, tparams):
     class_dist = ds_train.get_class_frequencies()
     weights = sum(class_dist) / class_dist
     criterion = CrossEntropyLoss(weight=weights)
+    print("Weighting CE loss with", weights.tolist())
 
     # define gradient descent optimizer
     Optim = getattr(torch.optim, hparams["optimizer"])

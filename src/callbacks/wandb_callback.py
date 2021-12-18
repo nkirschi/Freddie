@@ -68,8 +68,8 @@ class WandBCallback(Callback):
         wandb.log(self._transform_metrics(metrics), step=epoch)
 
     def after_epoch(self, epoch: int):
-        wandb.run.summary[self.summary_metric] = self.max_metric
         wandb.log({})  # finally commit for this epoch
+        wandb.summary[self.summary_metric] = self.max_metric
 
     def _append_history(self, loss, metrics):
         self.metrics_history["train/loss"].append(loss)

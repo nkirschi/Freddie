@@ -14,7 +14,6 @@ __status__ = "Prototype"
 # relevant directories !relative to project root!
 CONFIG_DIR   = "config"  # where the configuration files are held
 DATA_DIR     = "data"    # where metadata about data is located
-LABEL_SUBDIR = "labels"  # where the label mapping is located
 RAW_SUBDIR   = "raw"     # where the raw orbit data is located
 TRAIN_SUBDIR = "train"   # where the final training data resides
 EVAL_SUBDIR  = "eval"    # where the final evaluation data resides
