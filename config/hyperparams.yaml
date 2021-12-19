@@ -1,25 +1,25 @@
 # data split
-train_orbits: 1
-eval_orbits: 1
+train_orbits: 0.10
+eval_orbits: 0.10
 seed: 42
 
 # optimization
-batch_size: 4096
-learning_rate: 0.00001
+batch_size: 1024
+learning_rate: 0.0001
 optimizer: Adam
 
 # regularization
-dropout_rate: 0
+dropout_rate: 0.5
 batch_normalization: True
 early_stopping: True
 patience: 5
 
 # model
-model_arch: CRNN
+model_arch: MLP
 
 # task params
-window_size: 120
-future_size: 30
+window_size: 60
+future_size: 10
 features:
 - X_MSO
 - Y_MSO
@@ -31,17 +31,17 @@ features:
 - DBY_MSO
 - DBZ_MSO
 
-# MLP params
-hidden_layers: 3
-hidden_size0: 64
-hidden_size1: 64
-hidden_size2: 64
+# linear params
+hidden_layers: 2
+hidden_size0: 256
+hidden_size1: 256
+hidden_size2: 128
 
-# CNN params
+# convolutional params
 conv_layers: 3
-channel_size0: 128
-channel_size1: 128
-channel_size2: 128
+channel_size0: 64
+channel_size1: 64
+channel_size2: 64
 channel_size3: 64
 channel_size4: 64
 kernel_size0: 3
@@ -49,24 +49,36 @@ kernel_size1: 5
 kernel_size2: 7
 kernel_size3: 3
 kernel_size4: 3
-pool_size0: 1
-pool_size1: 1
-pool_size2: 1
-pool_size3: 1
-pool_size4: 1
+dilation_size0: 1
+dilation_size1: 1
+dilation_size2: 1
+dilation_size3: 1
+dilation_size4: 1
 stride_size0: 1
 stride_size1: 1
 stride_size2: 1
 stride_size3: 1
 stride_size4: 1
+pool_size0: 1
+pool_size1: 1
+pool_size2: 1
+pool_size3: 1
+pool_size4: 1
 
-# RNN params
+# recurrent params
 rnn_layers: 2
+state_size0: 32
 state_size1: 32
-state_size2: 32
 
-# TNN params
-transformer_encoders: 2
-transformer_decoders: 3
-transformer_dim: 64
-attention_heads: 8
+# attentional params
+attn_layers: 3
+attn_size0: 128
+attn_size1: 128
+attn_size2: 128
+attn_size3: 32
+attn_size4: 32
+head_size0: 4
+head_size1: 4
+head_size2: 4
+head_size3: 4
+head_size4: 4
