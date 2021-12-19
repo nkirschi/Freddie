@@ -10,7 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
-from fitter import Callback
+from learning.fitter import Callback
 
 
 class EarlyStoppingCallback(Callback):

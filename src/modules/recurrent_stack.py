@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from modules.tensor.projector import Projector
+from modules.projector import Projector
 
 
 class RecurrentStack(nn.Sequential):

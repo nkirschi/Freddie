@@ -12,7 +12,7 @@ __status__ = "Prototype"
 
 import torch
 
-from fitter import Callback
+from learning.fitter import Callback
 from os import PathLike
 
 

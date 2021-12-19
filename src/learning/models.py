@@ -18,11 +18,11 @@ import torch.nn as nn
 from abc import ABC, abstractmethod
 from math import prod
 
-from modules.tensor.transposer import Transpose
-from modules.stack.linear_stack import LinearStack
-from modules.stack.convolutional_stack import ConvStack
-from modules.stack.recurrent_stack import RecurrentStack
-from modules.stack.attentional_stack import AttentionalStack
+from modules.transposer import Transpose
+from modules.linear_stack import LinearStack
+from modules.convolutional_stack import ConvStack
+from modules.recurrent_stack import RecurrentStack
+from modules.attentional_stack import AttentionalStack
 
 
 ################################################################################
@@ -130,7 +130,7 @@ class FCN(FreddieModel):
                                     pool_sizes=kwargs["pool_sizes"],
                                     dropout_rate=kwargs["dropout_rate"],
                                     use_bn=kwargs["batch_normalization"])
-        self.out_conv = nn.Conv1d(kwargs["channel_sizes"][-1],
+        self.out_conv = nn.Conv1d(self.conv_stack.output_size()[0],
                                   self.out_shape[0] * self.out_shape[1],
                                   kernel_size=(1,))
         self.gap = nn.AvgPool1d(self.conv_stack.output_size()[1])
@@ -197,7 +197,7 @@ class CRNN(FreddieModel):
                                     use_bn=kwargs["batch_normalization"])
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
         self.swap_in = Transpose(-1, -2)
-        self.lstm_stack = RecurrentStack(in_size=kwargs["channel_sizes"][-1],
+        self.lstm_stack = RecurrentStack(in_size=self.conv_stack.output_size()[0],
                                          out_size=num_classes,
                                          seq_len=self.conv_stack.output_size()[1] + future_size,
                                          state_sizes=kwargs["state_sizes"],
@@ -216,6 +216,55 @@ class CRNN(FreddieModel):
 
 
 ################################################################################
+
+class ANN(FreddieModel):
+
+    def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        super().__init__(num_channels, window_size, future_size, num_classes)
+
+        self.zero_pad = nn.ConstantPad1d((0, future_size), value=0)
+        self.swap_in = Transpose(-1, -2)
+        self.linear = nn.Linear(self.in_shape[0], kwargs["attn_sizes"][0])
+        self.attn_stack = AttentionalStack(out_size=num_classes,
+                                           seq_len=window_size + future_size,
+                                           attn_sizes=kwargs["attn_sizes"],
+                                           head_sizes=kwargs["head_sizes"],
+                                           dropout_rate=kwargs["dropout_rate"],
+                                           use_bn=kwargs["batch_normalization"])
+        self.swap_out = Transpose(-1, -2)
+
+    def forward(self, x):
+        x = self.zero_pad(x)
+        x = self.swap_in(x)
+        x = self.linear(x)
+        x = self.attn_stack(x)
+        x = self.swap_out(x)
+
+        return x
+
+
+class TNN(FreddieModel):
+
+    def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        super().__init__(num_channels, window_size, future_size, num_classes)
+
+        self.zero_pad = nn.ConstantPad1d((0, future_size), value=0)
+        self.swap_in = Transpose(-1, -2)
+        self.linear = nn.Linear(self.in_shape[0], 64)
+        trans = nn.TransformerEncoderLayer(d_model=64, nhead=4)
+        self.trans = nn.TransformerEncoder(trans, num_layers=5)
+        self.linout = nn.Linear(64, 5)
+        self.swap_out = Transpose(-1, -2)
+
+    def forward(self, x):
+        x = self.zero_pad(x)
+        x = self.swap_in(x)
+        x = self.linear(x)
+        x = self.trans(x)
+        x = self.linout(x)
+        x = self.swap_out(x)
+
+        return x
 
 
 class ACRNN(FreddieModel):
@@ -237,7 +286,7 @@ class ACRNN(FreddieModel):
                                     use_bn=kwargs["batch_normalization"])
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
         self.swap_in = Transpose(-1, -2)
-        self.lstm_stack = RecurrentStack(in_size=kwargs["channel_sizes"][-1],
+        self.lstm_stack = RecurrentStack(in_size=self.conv_stack.output_size()[0],
                                          out_size=kwargs["attn_sizes"][0],
                                          seq_len=self.conv_stack.output_size()[1] + future_size,
                                          state_sizes=kwargs["state_sizes"],

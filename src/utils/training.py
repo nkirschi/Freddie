@@ -2,8 +2,7 @@
 Utility functions for training runs.
 """
 
-import constants as const
-import models
+from learning import models
 import numpy as np
 import os
 import random
@@ -17,13 +16,13 @@ from callbacks.checkpointing_callback import CheckpointingCallback
 from callbacks.early_stopping_callback import EarlyStoppingCallback
 from callbacks.metric_logging_callback import MetricLoggingCallback
 from callbacks.wandb_callback import WandBCallback
-from fitter import Fitter
-from messenger_dataset import MessengerDataset
+from learning.fitter import Fitter
+from learning.datasets import MessengerDataset
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from torchinfo import summary
 from torchmetrics import Accuracy, F1, MetricCollection
-from utils import io as ioutils, torchutils as torchutils
+from utils import constants as const, io as ioutils
 
 
 # see https://gist.github.com/ihoromi4/b681a9088f348942b01711f251e5f964
@@ -129,14 +128,13 @@ def construct_model(hparams):
                 channel_sizes=[hparams[f"channel_size{i}"] for i in range(hparams["conv_layers"])],
                 kernel_sizes=[hparams[f"kernel_size{i}"] for i in range(hparams["conv_layers"])],
                 stride_sizes=[hparams[f"stride_size{i}"] for i in range(hparams["conv_layers"])],
+                dilation_sizes=[hparams[f"dilation_size{i}"] for i in range(hparams["conv_layers"])],
                 pool_sizes=[hparams[f"pool_size{i}"] for i in range(hparams["conv_layers"])],
                 state_sizes=[hparams[f"state_size{i}"] for i in range(hparams["rnn_layers"])],
+                attn_sizes=[hparams[f"attn_size{i}"] for i in range(hparams["attn_layers"])],
+                head_sizes=[hparams[f"head_size{i}"] for i in range(hparams["attn_layers"])],
                 dropout_rate=hparams["dropout_rate"],
-                batch_normalization=hparams["batch_normalization"],
-                transformer_encoders=hparams["transformer_encoders"],
-                transformer_decoders=hparams["transformer_decoders"],
-                transformer_dim=hparams["transformer_dim"],
-                attention_heads=hparams["attention_heads"])
+                batch_normalization=hparams["batch_normalization"])
 
 
 def perform_train(model, hparams, tparams):
@@ -170,7 +168,7 @@ def perform_train(model, hparams, tparams):
 
     # print important info about the model
     print(model)
-    summary(model, input_size=(hparams["batch_size"], len(hparams["features"]), hparams["window_size"]))
+    summary(model, input_size=(hparams["batch_size"], len(hparams["features"]), hparams["window_size"]), depth=2)
 
     # prepare dataloaders
     print("Loading dataset...")

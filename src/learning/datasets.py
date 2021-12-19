@@ -10,7 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
-import constants as c
+from utils import constants as c
 import torch
 import numpy as np
 import pandas as pd

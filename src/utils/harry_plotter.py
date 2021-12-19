@@ -11,10 +11,10 @@ __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
 
-import constants as c
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import utils.constants as c
 
 from itertools import chain, cycle, product
 from matplotlib.dates import DateFormatter

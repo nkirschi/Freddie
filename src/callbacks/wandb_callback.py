@@ -13,7 +13,7 @@ __status__ = "Prototype"
 import torch
 import wandb
 
-from fitter import Callback
+from learning.fitter import Callback
 from collections import defaultdict
 from pathlib import Path
 
@@ -70,6 +70,7 @@ class WandBCallback(Callback):
     def after_epoch(self, epoch: int):
         wandb.log({})  # finally commit for this epoch
         wandb.summary[self.summary_metric] = self.max_metric
+        wandb.summary["testsummary"] = self.max_metric
 
     def _append_history(self, loss, metrics):
         self.metrics_history["train/loss"].append(loss)

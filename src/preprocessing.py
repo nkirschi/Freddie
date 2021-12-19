@@ -12,14 +12,13 @@ __status__ = "Prototype"
 
 ###############################################################################
 
-import constants as c
 import pandas as pd
 import random
 
 from functools import partial
 from os import PathLike
 from tqdm import tqdm
-from utils import io
+from utils import constants as c, io
 
 
 def prepare_labels():

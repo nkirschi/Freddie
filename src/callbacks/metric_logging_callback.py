@@ -13,7 +13,7 @@ __status__ = "Prototype"
 import json
 
 from collections import defaultdict
-from fitter import Callback
+from learning.fitter import Callback
 from os import PathLike
 
 

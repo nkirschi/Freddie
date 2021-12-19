@@ -18,7 +18,7 @@ import yaml
 from pathlib import Path
 from os import PathLike
 
-import constants as const
+from utils import constants as const
 
 
 def resolve_path(path: PathLike) -> Path:
