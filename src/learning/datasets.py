@@ -134,7 +134,7 @@ class MessengerDataset(Dataset):
         -------
         sample : tensor of float
             The requested window as float tensor.
-        label : list of int
+        label : tensor of int
             The corresponding step-wise labels between 0 and 4.
 
         Raises
