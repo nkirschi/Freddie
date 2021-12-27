@@ -18,6 +18,7 @@ from callbacks.metric_logging_callback import MetricLoggingCallback
 from callbacks.wandb_callback import WandBCallback
 from learning.fitter import Fitter
 from learning.datasets import MessengerDataset
+from pprint import pprint
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from torchinfo import summary
@@ -158,9 +159,9 @@ def perform_train(model, hparams, tparams):
     print(80 * "=", f"Run #{run_id}", 80 * "=", sep="\n")
     print(f"{torch.cuda.device_count()} GPUs")
     print("hyperparameters:")
-    print(hparams)
+    pprint(hparams)
     print("technical parameters:")
-    print(tparams)
+    pprint(tparams)
 
     # let WandB track the model parameters and gradients
     if tparams["wandb_enabled"]:
