@@ -86,7 +86,7 @@ class MessengerDataset(Dataset):
             raise ValueError("invalid 'split' argument")
 
         if isinstance(self.use_orbits, list):
-            files = map(lambda n: subdir / c.ORBIT_FILE(n), self.use_orbits)
+            files = list(map(lambda n: subdir / c.ORBIT_FILE(n), self.use_orbits))
         else:
             files = sorted(subdir.glob("*.csv"))
             if self.use_orbits < 1:
