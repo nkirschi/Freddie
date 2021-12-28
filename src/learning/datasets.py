@@ -69,7 +69,7 @@ class MessengerDataset(Dataset):
 
     def _load_stats(self):
         return pd.read_csv(ioutils.resolve_path(self.data_root) / c.STATS_FILE,
-                           usecols=[c.STAT_COL].extend(self.features), index_col=c.STAT_COL)
+                           usecols=self.features + [c.STAT_COL], index_col=c.STAT_COL)
 
     def _load_class_freqs(self):
         return pd.read_csv(ioutils.resolve_path(self.data_root) / c.FREQS_FILE, index_col=0)
@@ -94,7 +94,7 @@ class MessengerDataset(Dataset):
 
         orbits = []
         for file in tqdm(files):
-            df_orbit = pd.read_csv(file, usecols=[c.LABEL_COL].extend(self.features),
+            df_orbit = pd.read_csv(file, usecols=self.features + [c.LABEL_COL, c.ORBIT_COL],
                                    parse_dates=True, memory_map=True)
             if self.normalize:
                 data = df_orbit[self.features]
