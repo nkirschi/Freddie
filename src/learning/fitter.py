@@ -143,20 +143,35 @@ class Fitter:
 
         model.eval()
         epoch_loss = 0.0
+        running_loss = 0.0
         self.eval_metrics.reset()
 
-        for x, y in dl_eval:
+        for batch, (x, y) in enumerate(dl_eval):
+
+            # move tensors to the evaluation device
             x = x.to(self.eval_device)
             y = y.to(self.eval_device)
 
+            # forward propagation
             pred = model(x)
-            epoch_loss += self.criterion(pred, y).item()
-            self.eval_metrics(pred, y)
 
-        # compute final result
+            # loss and metric calculation
+            loss = self.criterion(pred, y)
+            self.eval_metrics(pred, y)
+            epoch_loss += loss.item()
+            running_loss += loss.item()
+
+            # intermediate logging
+            if self.log_every > 0 and (batch + 1) % self.log_every == 0:
+                self._log_progress(running_loss / self.log_every, self.eval_metrics.compute(),
+                                   batch + 1, len(dl_eval)),
+                running_loss = 0.0
+
+        # calculate total loss and metrics
         loss = epoch_loss / len(dl_eval)
         metrics = self.eval_metrics.compute()
         self.eval_metrics.reset()
+        self._log_progress(loss, metrics, len(dl_eval), len(dl_eval), end="\n")
 
         for cb in self.callbacks:
             cb.after_eval_step(self._unwrap(model), loss, metrics, epoch)
@@ -178,7 +193,8 @@ class Fitter:
         print(f"[{progress * '=':20}]", end=" ")
         print(f"loss: {loss:.8f}", end=" ")
         for key, val in metrics.items():
-            print(f"| {key}: {float(val):.8f}", end=" ")
+            if val.dim() == 0:
+                print(f"| {key}: {float(val):.8f}", end=" ")
         print(end=end)
 
 
