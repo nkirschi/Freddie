@@ -2,12 +2,14 @@
 Utility functions for training runs.
 """
 
-from learning import models
+import learning.models as models
 import numpy as np
 import os
 import random
 import sys
 import torch
+import utils.constants as c
+import utils.io as io
 import yaml
 import wandb
 
@@ -23,7 +25,6 @@ from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from torchinfo import summary
 from torchmetrics import Accuracy, F1, MetricCollection
-from utils import constants as const, io as ioutils
 
 
 # see https://gist.github.com/ihoromi4/b681a9088f348942b01711f251e5f964
@@ -45,10 +46,10 @@ def apply_global_seed(seed: int):
 
 def define_metrics():
     base_metrics = MetricCollection({
-        "accuracy": Accuracy(num_classes=len(const.CLASSES),
+        "accuracy": Accuracy(num_classes=len(c.CLASSES),
                              compute_on_step=False,
                              dist_sync_on_step=True),
-        "macro_f1": F1(num_classes=len(const.CLASSES),
+        "macro_f1": F1(num_classes=len(c.CLASSES),
                        average="macro",
                        mdmc_average="global",
                        compute_on_step=False,
@@ -65,7 +66,7 @@ def define_metrics():
         # "auprc":      AUPRC(num_classes=len(const.CLASSES),
         #                     compute_on_step=False,
         #                     dist_sync_on_step=True),
-        "claccuracy": Accuracy(num_classes=len(const.CLASSES),
+        "claccuracy": Accuracy(num_classes=len(c.CLASSES),
                                compute_on_step=False,
                                dist_sync_on_step=True,
                                average="none")
@@ -75,13 +76,13 @@ def define_metrics():
 
 
 def load_datasets(hparams):
-    ds_train = MessengerDataset(ioutils.resolve_path(const.DATA_DIR),
+    ds_train = MessengerDataset(io.resolve_path(c.DATA_DIR),
                                 split="train",
                                 features=hparams["features"],
                                 window_size=hparams["window_size"],
                                 future_size=hparams["future_size"],
                                 use_orbits=hparams["train_orbits"])
-    ds_eval = MessengerDataset(ioutils.resolve_path(const.DATA_DIR),
+    ds_eval = MessengerDataset(io.resolve_path(c.DATA_DIR),
                                split="eval",
                                features=hparams["features"],
                                window_size=hparams["window_size"],
@@ -107,20 +108,24 @@ def prepare_dataloaders(ds_train, ds_eval, hparams, tparams):
 
 def load_config():
     # load hyperparameter configuration from file
-    with open(ioutils.resolve_path(const.CONFIG_DIR) / const.HPARAMS_FILE) as f:
+    with open(io.resolve_path(c.CONFIG_DIR) / c.HPARAMS_FILE) as f:
         hparams = yaml.load(f, Loader=yaml.FullLoader)
 
     # load technical parameter configuration from file
-    with open(ioutils.resolve_path(const.CONFIG_DIR) / const.TPARAMS_FILE) as f:
+    with open(io.resolve_path(c.CONFIG_DIR) / c.TPARAMS_FILE) as f:
         tparams = yaml.load(f, Loader=yaml.FullLoader)
 
     # hyperparameters given via CLI have higher priority
-    hparams.update(ioutils.parse_cli_keyword_args(sys.argv[1:]))
+    hparams.update(io.parse_cli_keyword_args(sys.argv[1:]))
 
     return hparams, tparams
 
 
 def construct_model(hparams):
+    for key in ["hidden_layers", "conv_layers", "rnn_layers", "attn_layers"]:
+        if key not in hparams:
+            hparams[key] = 0
+
     Arch = getattr(models, hparams["model_arch"])
     return Arch(num_channels=len(hparams["features"]),
                 window_size=hparams["window_size"],
@@ -138,9 +143,19 @@ def construct_model(hparams):
                 batch_normalization=hparams["batch_normalization"])
 
 
+def load_model(run_id):
+    run_path = io.resolve_path(c.RUNS_DIR) / c.RUN_NAME(run_id)
+    with open(run_path / c.HPARAMS_FILE) as f:
+        hparams = yaml.load(f, yaml.FullLoader)
+    state_dict = torch.load(io.resolve_path(run_path) / c.BEST_MODEL_FILE)
+    model = construct_model(hparams)
+    model.load_state_dict(state_dict)
+    return model, hparams
+
+
 def perform_train(model, hparams, tparams):
     # initialize training environment
-    run_path, run_id = ioutils.create_run_directory(hparams)
+    run_path, run_id = io.create_run_directory(hparams)
 
     # apply the same seed to all libraries for reproducability
     apply_global_seed(hparams["seed"])
@@ -151,7 +166,7 @@ def perform_train(model, hparams, tparams):
                    entity=tparams["wandb_entity"],
                    group=tparams["wandb_group"],
                    dir=tparams["wandb_dir"],
-                   name=const.RUN_NAME(run_id),
+                   name=c.RUN_NAME(run_id),
                    notes=tparams["wandb_notes"],
                    config=hparams)
 
@@ -190,11 +205,11 @@ def perform_train(model, hparams, tparams):
     train_metrics, eval_metrics = define_metrics()
 
     # prepare training hooks
-    callbacks = [MetricLoggingCallback(run_path / const.METRICS_FILE),
-                 BestModelCallback(run_path / const.BEST_MODEL_FILE),
-                 CheckpointingCallback(run_path / const.CKPT_SUBDIR, const.CKPT_FILE)]
+    callbacks = [MetricLoggingCallback(run_path / c.METRICS_FILE),
+                 BestModelCallback(run_path / c.BEST_MODEL_FILE),
+                 CheckpointingCallback(run_path / c.CKPT_SUBDIR, c.CKPT_FILE)]
     if tparams["wandb_enabled"]:
-        callbacks.append(WandBCallback(const.CKPT_FILE, const.CLASSES, summary_metric="eval/macro_f1"))
+        callbacks.append(WandBCallback(c.CKPT_FILE, c.CLASSES, summary_metric="eval/macro_f1"))
     if hparams["early_stopping"]:
         callbacks.append(EarlyStoppingCallback(patience=hparams["patience"]))
 
@@ -202,9 +217,10 @@ def perform_train(model, hparams, tparams):
     fitter = Fitter(optimizer, criterion, train_metrics, eval_metrics,
                     max_epochs=tparams["max_epochs"],
                     log_every=10,
-                    train_device="cuda",
-                    eval_device="cuda",
+                    train_device=tparams["train_device"],
+                    eval_device=tparams["eval_device"],
                     callbacks=callbacks)
     fitter.fit(model, dl_train, dl_eval)
 
-    model.load_state_dict(torch.load(run_path / const.BEST_MODEL_FILE))
+    model.load_state_dict(torch.load(run_path / c.BEST_MODEL_FILE))
+    wandb.finish()
