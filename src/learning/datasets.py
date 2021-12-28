@@ -160,7 +160,7 @@ class MessengerDataset(Dataset):
 
     def explode_orbits(self):
         orb_range = lambda orbit_idx: range(self.orbit_borders[orbit_idx], self.orbit_borders[orbit_idx + 1])
-        return {orb.iloc[0][c.ORBIT_COL]: Subset(self, orb_range(i)) for i, orb in enumerate(self.orbits)}
+        return {orb[c.ORBIT_COL].iloc[0]: Subset(self, orb_range(i)) for i, orb in enumerate(self.orbits)}
 
     def get_orbits(self):
         """
