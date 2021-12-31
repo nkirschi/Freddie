@@ -41,6 +41,7 @@ class WandBCallback(Callback):
         self.summary_metric = summary_metric
 
         self.max_metric = float("-inf")
+        self.min_loss = float("inf")
         self.metrics_history = defaultdict(list)
 
     def after_train_step(self, model, loss, metrics, epoch):
@@ -60,7 +61,8 @@ class WandBCallback(Callback):
         metrics = {key: val.tolist() for key, val in metrics.items()}
         self._append_history(loss, metrics)
 
-        if metrics[self.summary_metric] > self.max_metric:
+        if loss < self.min_loss:
+            self.min_loss = loss
             self.max_metric = metrics[self.summary_metric]
 
         # log evaluation metrics
@@ -70,7 +72,6 @@ class WandBCallback(Callback):
     def after_epoch(self, epoch: int):
         wandb.log({})  # finally commit for this epoch
         wandb.summary[self.summary_metric] = self.max_metric
-        wandb.summary["testsummary"] = self.max_metric
 
     def _append_history(self, loss, metrics):
         self.metrics_history["train/loss"].append(loss)
