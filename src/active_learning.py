@@ -10,57 +10,73 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
-import random
 import torch
+import utils.constants as c
+import utils.io as io
+import utils.training as training
 
 from torch.nn.functional import softmax
-
-from utils import training
+from tqdm import tqdm
 
 
 def entropy(p: torch.Tensor, dim: int = -1) -> torch.Tensor:
     return -torch.where(p > 0, p * p.log(), p.new([0.])).sum(dim=dim)
 
 
-def orbit_confidence(preds: torch.Tensor):
-    return float(entropy(softmax(preds, dim=1), dim=1).max(dim=1).values.mean())
+def orbit_uncertainty(logits: torch.Tensor):
+    return float(entropy(softmax(logits, dim=1), dim=1).max(dim=1).values.mean())
+
+
+def worst_prediction(logits: torch.Tensor):
+    expits = softmax(logits.transpose(1, 2), dim=2)
+    return expits.flatten(0, 1)[entropy(expits, dim=2).argmax()]
 
 
 hparams, tparams = training.load_config()
-
-ds_train, _ = training.load_datasets(hparams)
-orbits = {k: torch.stack([sample for sample, label in v if 1 in label or 3 in label]) for k, v in ds_train.explode_orbits().items()}
 model = training.construct_model(hparams)
+device = torch.device(tparams["train_device"])
 
-# start with single random orbit
-train_orbits = [random.choice(list(orbits.keys()))]
-start_index = 0
+# load all training orbits and extract windows containing an SK or MP label
+print("Loading training data...")
+ds_train, _ = training.load_datasets(hparams)
+path = io.resolve_path(c.TEMP_DIR) / "critical_windows_partial.pt"
+if path.is_file():
+    print("Loading critical windows...")
+    all_orbits = torch.load(path)
+else:
+    print("Filtering critical windows...")
+    all_orbits = {k: torch.stack([sample for sample, label in v if 1 in label or 3 in label]).detach()
+                  for k, v in tqdm(ds_train.explode_orbits().items())}
+    torch.save(all_orbits, path)
 
-increment = 1
 
-while len(train_orbits) < len(orbits):
-    print(f"train_orbits: {train_orbits}")
+train_orbits = []
+increment = 10
 
-    hparams["train_split"] = train_orbits[start_index:]
-    # training.perform_train(model, hparams, tparams)
-    # now model should have params from lowest loss
 
-    unseen_orbits = {k: v for (k, v) in orbits.items() if k not in train_orbits}
+while len(train_orbits) < len(all_orbits):
+    with torch.no_grad():
+        model.to(device)
+        model.eval()
 
-    conf_vals = {}
-    for key, orbit_tensor in unseen_orbits.items():
-        with torch.no_grad():
-            preds = model(orbit_tensor)
-        conf = orbit_confidence(preds)
-        conf_vals[key] = conf
+        # calculate uncertainty scores for unseen orbits
+        uncerts = {}
+        for key, orbit_tensor in all_orbits.items():
+            if key not in train_orbits:
+                preds = model(orbit_tensor.to(device))
+                uncerts[key] = orbit_uncertainty(preds)
+                print("device:", orbit_tensor.device)
 
-        print(f"confidence on orbit #{key}:", conf)
-        print(f"-> number of relevant samples: {len(orbit_tensor)}")
+                print(f"uncertainty on orbit #{key}:", uncerts[key])
 
-    start_index = len(train_orbits)
-    worst_orbits = sorted(conf_vals, key=conf_vals.get, reverse=True)[:increment]
-    # worst_orbits = heapq.nlargest(increment, conf_vals, conf_vals.get)
-    train_orbits += worst_orbits
+        worst_orbits = sorted(uncerts, key=uncerts.get, reverse=True)[:increment]
+        train_orbits += worst_orbits
 
-    print(f"most inconfident orbits: {train_orbits[start_index:]}")
+        print(f"most uncertain orbits: {worst_orbits}")
+        for o in worst_orbits:
+            orbit_tensor = all_orbits[o].to(device)
+            worst_pred = worst_prediction(model(orbit_tensor))
+            print(f"worst prediction on orbit #{o}:", worst_pred)
 
+    hparams["train_orbits"] = train_orbits
+    training.perform_train(model, hparams, tparams)

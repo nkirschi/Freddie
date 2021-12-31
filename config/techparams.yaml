@@ -1,11 +1,13 @@
 # training procedure
-max_epochs: 30
-num_workers: 28
+max_epochs: 100
+num_workers: 24
+train_device: cuda
+eval_device: cuda
 
 # weights and biases
 wandb_dir: /root/
 wandb_enabled: true
 wandb_entity: nelorth
-wandb_group: crnn_full
-wandb_notes: try full with lower lr
+wandb_group: active_learning_test
+wandb_notes: Active learning test...
 wandb_project: freddie
