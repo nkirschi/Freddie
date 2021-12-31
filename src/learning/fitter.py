@@ -91,6 +91,8 @@ class Fitter:
                 print("Stopping early")
                 break
 
+        torch.cuda.empty_cache()
+
     def __train_step(self, model: Module, dl_train: DataLoader, epoch: int):
         model = model.module if self.train_device.type == "cpu" else model
         self._ensure_device(model, self.train_device)
@@ -188,9 +190,8 @@ class Fitter:
 
     @staticmethod
     def _log_progress(loss, metrics, batch, size, end="\r"):
-        progress = (20 * batch) // size
-        print(f"{batch}/{size}", end=" ")
-        print(f"[{progress * '=':20}]", end=" ")
+        print(f"{f'{batch}/{size}':>16}", end=" ")
+        print(f"[{(24 * batch) // size * '=':24}]", end=" ")
         print(f"loss: {loss:.8f}", end=" ")
         for key, val in metrics.items():
             if val.dim() == 0:
