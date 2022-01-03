@@ -63,3 +63,5 @@ state_size1: 32
 attn_layers: 2
 attn_size0: 64
 attn_size1: 64
+head_size0: 4
+head_size1: 4
