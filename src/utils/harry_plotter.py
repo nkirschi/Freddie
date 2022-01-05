@@ -23,6 +23,7 @@ from matplotlib.patches import Patch
 LINEWIDTH_THIN = 0.25  # thin plot linewidth
 LINEWIDTH_THICK = 1  # thick plot linewidth
 LINESTYLE = "--"  # default line style
+DASHES = (16, 10)
 
 # update settings for LaTeX exporting
 mpl.rcParams.update({
@@ -38,15 +39,15 @@ mpl.rcParams.update({
 })
 
 
-def plot_function(func, xlim, ylim=(), label=None, xlabel=None, ylabel=None, title=None, outfile=None, **kwargs):
-    x = np.arange(xlim[0], xlim[1] + (xlim[1] - xlim[0]) / 100, (xlim[1] - xlim[0]) / 100)
+def plot_function(func, xlim, ylim=(), fineness=1000, label=None, xlabel=None, ylabel=None, title=None, outfile=None, **kwargs):
+    x = np.arange(xlim[0], xlim[1] + (xlim[1] - xlim[0]) / fineness, (xlim[1] - xlim[0]) / fineness)
 
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     if ylim:
         plt.ylim(ylim)
-    plt.grid(linewidth=LINEWIDTH_THIN, linestyle=LINESTYLE)
+    plt.grid(linewidth=LINEWIDTH_THIN, linestyle=LINESTYLE, dashes=DASHES)
     plt.plot(x, func(x), label=label, linewidth=LINEWIDTH_THICK, **kwargs)
 
     _save_figure(outfile)
@@ -57,7 +58,7 @@ def plot_metrics(train_metric, eval_metric, ylabel=None, outfile=None):
     plt.plot(range(1, len(train_metric) + 1), train_metric, label="training")
     plt.plot(range(1, len(eval_metric) + 1), eval_metric, label="validation")
     plt.legend()
-    plt.grid(linestyle=LINESTYLE)
+    plt.grid(linewidth=LINEWIDTH_THIN, linestyle=LINESTYLE, dashes=DASHES)
     plt.xlabel("Epoch")
     plt.ylabel(ylabel)
 
@@ -84,7 +85,7 @@ def plot_orbit(x, Y, *, symbol, labels=(), title=None, xlabel=None, ylabel=None,
         class_legend = [Patch(facecolor=colors[key], label=val) for key, val in c.CLASSES.items()]
         plt.gca().add_artist(plt.legend(handles=class_legend, loc="upper right"))
 
-    plt.grid(linewidth=LINEWIDTH_THIN, linestyle="--")
+    plt.grid(linewidth=LINEWIDTH_THIN, linestyle=LINESTYLE, dashes=DASHES)
     plt.margins(x=0)
     plt.title(title)
     plt.xlabel(xlabel)
