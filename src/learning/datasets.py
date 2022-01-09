@@ -83,7 +83,7 @@ class MessengerDataset(Dataset):
         elif self.split == "test":
             subdir /= c.TEST_SUBDIR
         else:
-            raise ValueError("invalid 'split' argument")
+            raise ValueError("Invalid 'split' argument! Must be one of 'train', 'eval' and 'test'.")
 
         if isinstance(self.use_orbits, list):
             files = list(map(lambda n: subdir / c.ORBIT_FILE(n), self.use_orbits))
