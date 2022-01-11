@@ -66,6 +66,7 @@ def plot_metrics(train_metric, eval_metric, ylabel=None, outfile=None):
 
 
 def plot_orbit(x, Y, *, symbol, labels=(), title=None, xlabel=None, ylabel=None, outfile=None):
+    plt.figure()
     plt.gca().xaxis.set_major_formatter(DateFormatter("$%d$ %b '$%y$\n$%H$:$%M$", usetex=False))
 
     for (i, y) in enumerate(Y):
@@ -75,7 +76,7 @@ def plot_orbit(x, Y, *, symbol, labels=(), title=None, xlabel=None, ylabel=None,
     p = plt.plot(x, n, linewidth=LINEWIDTH_THIN, label=f"$\\pm||\\vec{{{symbol}}}||$")
     plt.plot(x, -n, linewidth=LINEWIDTH_THIN, color=p[-1].get_color())
 
-    colors = ["whitesmoke", "indianred", "burlywood", "cornflowerblue", "lightgreen"]
+    colors = ["whitesmoke", "orange", "lightgray", "cornflowerblue", "lightgreen"]
 
     if len(labels) > 0:
         for i in range(len(labels) - 1):
