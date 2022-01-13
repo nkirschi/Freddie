@@ -217,59 +217,9 @@ class CRNN(FreddieModel):
 
 ################################################################################
 
-class ANN(FreddieModel):
-
-    def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
-        super().__init__(num_channels, window_size, future_size, num_classes)
-
-        self.zero_pad = nn.ConstantPad1d((0, future_size), value=0)
-        self.swap_in = Transpose(-1, -2)
-        self.linear = nn.Linear(self.in_shape[0], kwargs["attn_sizes"][0])
-        self.attn_stack = AttentionalStack(out_size=num_classes,
-                                           seq_len=window_size + future_size,
-                                           attn_sizes=kwargs["attn_sizes"],
-                                           head_sizes=kwargs["head_sizes"],
-                                           dropout_rate=kwargs["dropout_rate"],
-                                           use_bn=kwargs["batch_normalization"])
-        self.swap_out = Transpose(-1, -2)
-
-    def forward(self, x):
-        x = self.zero_pad(x)
-        x = self.swap_in(x)
-        x = self.linear(x)
-        x = self.attn_stack(x)
-        x = self.swap_out(x)
-
-        return x
-
-
-class TNN(FreddieModel):
-
-    def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
-        super().__init__(num_channels, window_size, future_size, num_classes)
-
-        self.zero_pad = nn.ConstantPad1d((0, future_size), value=0)
-        self.swap_in = Transpose(-1, -2)
-        self.linear = nn.Linear(self.in_shape[0], 64)
-        trans = nn.TransformerEncoderLayer(d_model=64, nhead=4)
-        self.trans = nn.TransformerEncoder(trans, num_layers=5)
-        self.linout = nn.Linear(64, 5)
-        self.swap_out = Transpose(-1, -2)
-
-    def forward(self, x):
-        x = self.zero_pad(x)
-        x = self.swap_in(x)
-        x = self.linear(x)
-        x = self.trans(x)
-        x = self.linout(x)
-        x = self.swap_out(x)
-
-        return x
-
-
-class ACRNN(FreddieModel):
+class CANN(FreddieModel):
     """
-    Attentional convolutional recurrent network.
+    Convolutional attentional recurrent network combining convolutions and multi-head self attention.
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
@@ -286,12 +236,7 @@ class ACRNN(FreddieModel):
                                     use_bn=kwargs["batch_normalization"])
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
         self.swap_in = Transpose(-1, -2)
-        self.lstm_stack = RecurrentStack(in_size=self.conv_stack.output_size()[0],
-                                         out_size=kwargs["attn_sizes"][0],
-                                         seq_len=self.conv_stack.output_size()[1] + future_size,
-                                         state_sizes=kwargs["state_sizes"],
-                                         dropout_rate=kwargs["dropout_rate"],
-                                         use_bn=kwargs["batch_normalization"])
+        self.linear = nn.Linear(self.conv_stack.output_size()[0], kwargs["attn_sizes"][0])
         self.attn_stack = AttentionalStack(out_size=num_classes,
                                            seq_len=self.conv_stack.output_size()[1] + future_size,
                                            attn_sizes=kwargs["attn_sizes"],
@@ -304,7 +249,7 @@ class ACRNN(FreddieModel):
         x = self.conv_stack(x)
         x = self.zero_pad(x)
         x = self.swap_in(x)
-        x = self.lstm_stack(x)
+        x = self.linear(x)
         x = self.attn_stack(x)
         x = self.swap_out(x)
 
