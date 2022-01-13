@@ -11,7 +11,6 @@ class AttentionalStack(nn.Sequential):
         attn_sizes.append(out_size)
         for i in range(len(attn_sizes) - 1):
             self.add_module(f"attn{i}", MultiheadSelfAttention(attn_sizes[i], head_sizes[i]))
-            # self.add_module(f"proj{i}", Projector(0))
             if dropout_rate > 0:
                 self.add_module(f"dropout{i}", nn.Dropout(dropout_rate))
             self.add_module(f"relu{i}", nn.ReLU())
