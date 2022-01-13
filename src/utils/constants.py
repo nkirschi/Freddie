@@ -13,11 +13,12 @@ __status__ = "Prototype"
 
 # relevant directories !relative to project root!
 CONFIG_DIR   = "config"  # where the configuration files are held
-DATA_DIR     = "data"    # where metadata about data is located
-RAW_SUBDIR   = "raw"     # where the raw orbit data is located
-TRAIN_SUBDIR = "train"   # where the final training data resides
-EVAL_SUBDIR  = "eval"    # where the final evaluation data resides
-TEST_SUBDIR  = "test"    # where the final testing data resides
+
+DATA_DIR     = "data"   # where metadata about data is located
+RAW_SUBDIR   = "raw"    # where the raw orbit data is located
+TRAIN_SUBDIR = "train"  # where the final training data resides
+EVAL_SUBDIR  = "eval"   # where the final evaluation data resides
+TEST_SUBDIR  = "test"   # where the final testing data resides
 
 RUNS_DIR     = "runs"         # where the training run data resides
 CKPT_SUBDIR  = "checkpoints"  # where the trained models reside
@@ -38,7 +39,7 @@ BEST_MODEL_FILE = "best_model.pth"
 CKPT_FILE = lambda n: f"epoch_{n:02d}.pth"
 RUN_NAME = lambda n: f"{n:04d}"
 
-# important column names
+# important CSV column names
 DATE_COL = "DATE"
 ORBIT_COL = "ORBIT"
 LABEL_COL = "LABEL"
@@ -48,7 +49,7 @@ FREQ_COL = "FREQ"
 EVENT_COLS = list(range(1, 9))
 FLUX_COLS = ["BX_MSO", "BY_MSO", "BZ_MSO"]
 
-# class name mapping
+# mapping: class ordinal -> region name
 CLASSES = {
     0: "IMF",
     1: "SK",
