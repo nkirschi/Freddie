@@ -113,7 +113,7 @@ class CNN(FreddieModel):
 ################################################################################
 
 
-class FCN(FreddieModel):
+class FCNN(FreddieModel):
     """
     Fully convolutional network with global average pooling (GAP) instead of linear layers.
     """
