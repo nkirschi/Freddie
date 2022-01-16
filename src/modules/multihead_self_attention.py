@@ -8,5 +8,4 @@ class MultiheadSelfAttention(nn.Module):
         self.attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
 
     def forward(self, x):
-        return self.attn.forward(x, x, x)[0]
-
+        return self.attn.forward(x, x, x, need_weights=False)[0]
