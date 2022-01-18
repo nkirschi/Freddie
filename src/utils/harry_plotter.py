@@ -100,15 +100,19 @@ def plot_orbit(x, Y, *, symbol, labels=(), title=None, xlabel=None, ylabel=None,
 def plot_confusion_matrix(confmat, *,
                           cmap="Blues",
                           labels=None,
-                          xlabel="predicted",
-                          ylabel="true",
-                          normalize=True,
+                          xlabel="predicted class",
+                          ylabel="true class",
+                          normalize=None,
                           show_colorbar=True,
                           show_values=True,
                           outfile=None):
 
-    if normalize:
+    if normalize == "all":
         confmat = confmat / confmat.sum()
+    elif normalize == "precision":
+        confmat = confmat / confmat.sum(dim=0)
+    elif normalize == "recall":
+        confmat = confmat / confmat.sum(dim=1).unsqueeze(1)
 
     plt.set_cmap(cmap)
     im = plt.matshow(confmat)
@@ -118,8 +122,8 @@ def plot_confusion_matrix(confmat, *,
     labels = labels if labels else ticks
     plt.xticks(ticks, labels, rotation=45)
     plt.yticks(ticks, labels)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    plt.xlabel(xlabel, labelpad=20)
+    plt.ylabel(ylabel, labelpad=10)
 
     if show_colorbar:
         plt.colorbar()
@@ -129,7 +133,7 @@ def plot_confusion_matrix(confmat, *,
         for i, j in product(range(num_classes), range(num_classes)):
             color = im.cmap(1.0) if confmat[i, j] < thresh else im.cmap(0)
             text = format(confmat[i, j], ".2g")
-            plt.text(j, i, text, ha="center", va="center", color=color)
+            plt.text(j, i, text, ha="center", va="center", color=color, fontsize="small")
 
     _save_figure(outfile)
 
