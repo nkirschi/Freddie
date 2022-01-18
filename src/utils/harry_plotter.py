@@ -41,14 +41,17 @@ mpl.rcParams.update({
 
 def plot_function(func, xlim, ylim=(), fineness=1000, label=None, xlabel=None, ylabel=None, title=None, outfile=None, **kwargs):
     x = np.arange(xlim[0], xlim[1] + (xlim[1] - xlim[0]) / fineness, (xlim[1] - xlim[0]) / fineness)
+    plot_values(x, func(x), ylim, label, xlabel, ylabel, title, outfile, **kwargs)
 
+
+def plot_values(x, y, ylim=(), label=None, xlabel=None, ylabel=None, title=None, outfile=None, **kwargs):
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     if ylim:
         plt.ylim(ylim)
     plt.grid(linewidth=LINEWIDTH_THIN, linestyle=LINESTYLE, dashes=DASHES)
-    plt.plot(x, func(x), label=label, linewidth=LINEWIDTH_THICK, **kwargs)
+    plt.plot(x, y, label=label, linewidth=LINEWIDTH_THICK, **kwargs)
 
     _save_figure(outfile)
 
@@ -140,4 +143,4 @@ def plot_confusion_matrix(confmat, *,
 
 def _save_figure(outfile):
     if outfile:
-        plt.savefig(outfile, bbox_inches="tight")
+        plt.savefig(outfile)
