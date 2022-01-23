@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import utils.constants as c
 
-from itertools import chain, cycle, product
+from itertools import product
 from matplotlib.dates import DateFormatter
 from matplotlib.patches import Patch
 
@@ -34,6 +34,8 @@ mpl.rcParams.update({
     "figure.autolayout": True,
     "text.latex.preamble": "\n".join([
         r"\usepackage{palatino}",
+        r"\usepackage{amsfonts}",
+        r"\usepackage{bm}",
         r"\usepackage{siunitx}",
     ])
 })
@@ -56,20 +58,7 @@ def plot_values(x, y, ylim=(), label=None, xlabel=None, ylabel=None, title=None,
     _save_figure(outfile)
 
 
-def plot_metrics(train_metric, eval_metric, ylabel=None, outfile=None):
-    plt.figure(figsize=(4, 3))
-    plt.plot(range(1, len(train_metric) + 1), train_metric, label="training")
-    plt.plot(range(1, len(eval_metric) + 1), eval_metric, label="validation")
-    plt.legend()
-    plt.grid(linewidth=LINEWIDTH_THIN, linestyle=LINESTYLE, dashes=DASHES)
-    plt.xlabel("Epoch")
-    plt.ylabel(ylabel)
-
-    _save_figure(outfile)
-
-
 def plot_orbit(x, Y, *, symbol, labels=(), title=None, xlabel=None, ylabel=None, outfile=None):
-    plt.figure()
     plt.gca().xaxis.set_major_formatter(DateFormatter("$%d$ %b '$%y$\n$%H$:$%M$", usetex=False))
 
     for (i, y) in enumerate(Y):
@@ -143,4 +132,4 @@ def plot_confusion_matrix(confmat, *,
 
 def _save_figure(outfile):
     if outfile:
-        plt.savefig(outfile)
+        plt.savefig(outfile, bbox_inches="tight")
