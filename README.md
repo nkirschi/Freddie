@@ -98,8 +98,7 @@ The entire project folder structure is outlined below:
 │   │   ├── harry_plotter.py              # plotting functions based on matplotlib
 │   │   ├── io.py                         # I/O related helper functions
 │   │   ├── timer.py                      # context manager for timing source code execution
-│   │   ├── torchutils.py                 # handy abbreviations for common PyTorch workflows
-│   │   └── training.py                   # definition of reusable training steps
+│   │   └── torchutils.py                 # handy abbreviations for common PyTorch workflows
 │   ├── active_learning.py                # active learning algorithm from the thesis
 │   ├── ordinary_training.py              # standard passive learning procedure
 │   └── preprocessing.py                  # data preprocessing as described in the thesis
