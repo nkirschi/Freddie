@@ -182,20 +182,22 @@ def perform_train(model, hparams, tparams):
                    config=hparams)
 
     # log basic information about the run
-    print(80 * "=", f"Run #{run_id}", 80 * "=", sep="\n")
-    print(f"{torch.cuda.device_count()} GPUs")
-    print("hyperparameters:")
-    pprint(hparams)
-    print("technical parameters:")
-    pprint(tparams)
+    if tparams["verbose"]:
+        print(80 * "=", f"Run #{run_id}", 80 * "=", sep="\n")
+        print(f"{torch.cuda.device_count()} GPUs")
+        print("hyperparameters:")
+        pprint(hparams)
+        print("technical parameters:")
+        pprint(tparams)
 
     # let WandB track the model parameters and gradients
     if tparams["wandb_enabled"]:
         wandb.watch(model, log="all")
 
     # print important info about the model
-    print(model)
-    summary(model, input_size=(hparams["batch_size"], len(hparams["features"]), hparams["window_size"]), depth=2)
+    if tparams["verbose"]:
+        print(model)
+        summary(model, input_size=(hparams["batch_size"], len(hparams["features"]), hparams["window_size"]), depth=2)
 
     # prepare dataloaders
     print("Loading dataset...")
@@ -206,7 +208,8 @@ def perform_train(model, hparams, tparams):
     class_dist = ds_train.get_class_frequencies()
     weights = sum(class_dist) / class_dist
     criterion = CrossEntropyLoss(weight=weights)
-    print("Weighting CE loss with", weights.tolist())
+    if tparams["verbose"]:
+        print("Weighting CE loss with", weights.tolist())
 
     # define gradient descent optimizer
     Optim = getattr(torch.optim, hparams["optimizer"])

@@ -1,13 +1,14 @@
 # training procedure
 max_epochs: 100
-num_workers: 24
+num_workers: 32
 train_device: cuda
 eval_device: cuda
+verbose: true
 
 # weights and biases
 wandb_dir: /root/
 wandb_enabled: true
 wandb_entity: nelorth
-wandb_group: active_learning_test
-wandb_notes: Active learning test...
+wandb_group: al_paper
+wandb_notes: AL with inc(n) := max{10, floor(n / 4)}
 wandb_project: freddie
