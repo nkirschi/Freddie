@@ -164,5 +164,6 @@ while len(train_orbits) < len(all_orbits):
 
     # retrain with updated set of orbits
     hparams["train_orbits"] = train_orbits
+    tparams["wandb_notes"] = f"AL #{iteration} ({len(train_orbits)}/{len(all_orbits)})"
     ordinary_training.perform_train(model, hparams, tparams)
     iteration += 1
