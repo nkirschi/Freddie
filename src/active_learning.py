@@ -110,7 +110,7 @@ def prepare_orbits():
 
     print("Preparing training data...")
     ds_train, _ = ordinary_training.load_datasets(hparams)
-    path = io.resolve_path(c.TEMP_DIR) / "critical_windows_full.pt"
+    path = io.resolve_path(c.TEMP_DIR) / "critical_windows.pt"
     if path.is_file():
         print("Loading cached critical windows...")
         all_orbits = torch.load(path)
@@ -165,5 +165,6 @@ while len(train_orbits) < len(all_orbits):
     # retrain with updated set of orbits
     hparams["train_orbits"] = train_orbits
     tparams["wandb_notes"] = f"AL #{iteration} ({len(train_orbits)}/{len(all_orbits)})"
+    tparams["verbose"] = False
     ordinary_training.perform_train(model, hparams, tparams)
     iteration += 1

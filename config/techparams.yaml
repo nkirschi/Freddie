@@ -1,5 +1,5 @@
 # training procedure
-max_epochs: 100
+max_epochs: 20
 num_workers: 32
 train_device: cuda
 eval_device: cuda
@@ -7,7 +7,7 @@ verbose: true
 
 # weights and biases
 wandb_dir: /root/
-wandb_enabled: true
+wandb_enabled: True
 wandb_entity: nelorth
 wandb_group: al_paper
 wandb_notes: AL with inc(n) := max{10, floor(n / 4)}
