@@ -1,5 +1,5 @@
 """
-This file contains a class for measuring execution times.
+This file contains a class for measuring execution durations.
 """
 
 __author__ = "Nikolas Kirschstein"

@@ -10,6 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 import torch
 
 from learning.fitter import Callback
@@ -37,4 +38,6 @@ class CheckpointingCallback(Callback):
         self.file_pattern = file_pattern
 
     def after_train_step(self, model, loss, metrics, epoch):
+        # inherit doc
+
         torch.save(model.state_dict(), self.target_dir / self.file_pattern(epoch))

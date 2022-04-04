@@ -1,5 +1,5 @@
 """
-Utility functions abbreviating common PyTorch patterns.
+This file contains utility functions abbreviating common PyTorch patterns.
 """
 
 __author__ = "Nikolas Kirschstein"

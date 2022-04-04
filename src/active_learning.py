@@ -10,6 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 import torch
 import utils.constants as c
 import utils.io as io
@@ -136,7 +137,7 @@ train_orbits = []
 history = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
 # training set increment function as discussed in the paper
-increment = lambda n: max(10, int(n / 4))
+increment = lambda n: max(10, int(n / 2))
 
 
 while len(train_orbits) < len(all_orbits):

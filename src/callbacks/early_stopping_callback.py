@@ -10,6 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 from learning.fitter import Callback
 
 
@@ -32,6 +33,8 @@ class EarlyStoppingCallback(Callback):
         self.current_patience = patience
 
     def after_eval_step(self, model, loss, metrics, epoch):
+        # inherit doc
+
         if loss > self.last_loss:
             self.current_patience -= 1
         else:
@@ -39,4 +42,6 @@ class EarlyStoppingCallback(Callback):
         self.last_loss = loss
 
     def after_epoch(self, epoch):
+        # inherit doc
+
         return self.current_patience == 0

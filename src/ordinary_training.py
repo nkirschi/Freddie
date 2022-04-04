@@ -42,6 +42,13 @@ def apply_global_seed(seed: int):
     Applies the same seed to all libraries that make use of randomness and enforces deterministic GPU computation.
 
     See https://gist.github.com/ihoromi4/b681a9088f348942b01711f251e5f964
+
+
+    Parameters
+    ----------
+    seed: int
+        The seed to apply
+
     """
 
     os.environ["PYTHONHASHSEED"] = str(seed)
@@ -56,6 +63,17 @@ def apply_global_seed(seed: int):
 
 
 def define_metrics():
+    """
+    Defines the metrics to use for model assessment.
+
+    Returns
+    -------
+    train_metrics : MetricCollection
+        The metrics to use for a training step.
+    eval_metrics : MetricCollection
+        The metrics to use for an evaluation step.
+    """
+
     base_metrics = MetricCollection({
         "accuracy": Accuracy(num_classes=len(c.CLASSES),
                              compute_on_step=False,
@@ -68,15 +86,9 @@ def define_metrics():
     })
 
     train_metrics = base_metrics.clone(prefix="train/")
+
     eval_metrics = base_metrics.clone(prefix="eval/")
     eval_metrics.add_metrics({
-        # "auroc":      AUROC(num_classes=len(const.CLASSES),
-        #                     compute_on_step=False,
-        #                     dist_sync_on_step=True,
-        #                     average=None),
-        # "auprc":      AUPRC(num_classes=len(const.CLASSES),
-        #                     compute_on_step=False,
-        #                     dist_sync_on_step=True),
         "claccuracy": Accuracy(num_classes=len(c.CLASSES),
                                compute_on_step=False,
                                dist_sync_on_step=True,
@@ -87,6 +99,22 @@ def define_metrics():
 
 
 def load_datasets(hparams):
+    """
+    Loads and returns the training and evaluation sets.
+
+    Parameters
+    ----------
+    hparams: dict[str]
+        The hyperparameters for this run.
+
+    Returns
+    -------
+    ds_train : MessengerDataset
+        The training set.
+    ds_eval : MessengerDataset
+        The evaluation set.
+    """
+
     ds_train = MessengerDataset(io.resolve_path(c.DATA_DIR),
                                 split="train",
                                 features=hparams["features"],
@@ -103,6 +131,28 @@ def load_datasets(hparams):
 
 
 def prepare_dataloaders(ds_train, ds_eval, hparams, tparams):
+    """
+    Wraps the given training and evaluation sets in data loaders.
+
+    Parameters
+    ----------
+    ds_train : DataLoader
+        The training set.
+    ds_eval : MessengerDataset
+        The evaluation set.
+    hparams : dict[str]
+        The hyperparameters to use.
+    tparams : dict[str]
+        The technical parameters to use.
+
+    Returns
+    -------
+    dl_train : DataLoader
+        The training data loader.
+    dl_eval : DataLoader
+        The evaluation data loader.
+    """
+
     dl_train = DataLoader(ds_train,
                           batch_size=hparams["batch_size"],
                           num_workers=tparams["num_workers"],
@@ -118,6 +168,18 @@ def prepare_dataloaders(ds_train, ds_eval, hparams, tparams):
 
 
 def load_config():
+    """
+    Loads and returns the config dictionaries.
+
+    Returns
+    -------
+    hparams : dict[str]
+        The hyperparameters.
+    tparams : dict[str]
+        The technical parameters.
+
+    """
+
     # load hyperparameter configuration from file
     with open(io.resolve_path(c.CONFIG_DIR) / c.HPARAMS_FILE) as f:
         hparams = yaml.load(f, Loader=yaml.FullLoader)
@@ -133,6 +195,20 @@ def load_config():
 
 
 def construct_model(hparams):
+    """
+    Constructs and returns the model.
+
+    Parameters
+    ----------
+    hparams : dict[str]
+        The hyperparameters.
+
+    Returns
+    -------
+    FreddieModel
+        The model
+    """
+
     for key in ["hidden_layers", "conv_layers", "rnn_layers", "attn_layers"]:
         if key not in hparams:
             hparams[key] = 0
@@ -155,6 +231,23 @@ def construct_model(hparams):
 
 
 def load_model(run_id):
+    """
+    Loads a model and its hyperparameters from disk for the given run ID.
+
+    Parameters
+    ----------
+    run_id : int
+        The ID of the run in question.
+
+    Returns
+    -------
+    model : Module
+        The model.
+    hparams : dict[str]
+        The hyperparameters.
+
+    """
+
     run_path = io.resolve_path(c.RUNS_DIR) / c.RUN_NAME(run_id)
     with open(run_path / c.HPARAMS_FILE) as f:
         hparams = yaml.load(f, yaml.FullLoader)
@@ -165,6 +258,20 @@ def load_model(run_id):
 
 
 def perform_train(model, hparams, tparams):
+    """
+    Executes the training procedure.
+
+    Parameters
+    ----------
+    model : Module
+    hparams
+    tparams
+
+    Returns
+    -------
+
+    """
+
     # initialize training environment
     run_path, run_id = io.create_run_directory(hparams)
 
@@ -238,6 +345,7 @@ def perform_train(model, hparams, tparams):
 
     model.load_state_dict(torch.load(run_path / c.BEST_MODEL_FILE))
     wandb.finish()
+
 
 ################################################################################
 

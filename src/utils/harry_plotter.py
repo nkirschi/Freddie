@@ -1,5 +1,5 @@
 """
-Definition of utility plotting functions.
+This file offers utility functions for plotting.
 """
 
 __author__ = "Nikolas Kirschstein"

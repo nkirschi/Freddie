@@ -13,6 +13,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 import torch.nn as nn
 
 from abc import ABC, abstractmethod
@@ -36,6 +37,7 @@ class FreddieModel(nn.Module, ABC):
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes):
+        # inherit doc
         super().__init__()
 
         self.in_shape = (num_channels, window_size)
@@ -43,6 +45,7 @@ class FreddieModel(nn.Module, ABC):
 
     @abstractmethod
     def forward(self, x):
+        # inherit doc
         ...
 
 
@@ -55,6 +58,8 @@ class MLP(FreddieModel):
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        # inherit doc
+
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.flatten = nn.Flatten(-2, -1)
@@ -66,6 +71,8 @@ class MLP(FreddieModel):
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
+        # inherit doc
+
         x = self.flatten(x)
         x = self.hidden_stack(x)
         x = self.unflatten(x)
@@ -82,6 +89,8 @@ class CNN(FreddieModel):
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        # inherit doc
+
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.conv_stack = ConvStack(in_size=num_channels,
@@ -102,6 +111,8 @@ class CNN(FreddieModel):
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
+        # inherit doc
+
         x = self.conv_stack(x)
         x = self.flatten(x)
         x = self.linear_stack(x)
@@ -119,6 +130,8 @@ class FCNN(FreddieModel):
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        # inherit doc
+
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.conv_stack = ConvStack(in_size=num_channels,
@@ -137,6 +150,8 @@ class FCNN(FreddieModel):
         self.unflatten = nn.Unflatten(-1, self.out_shape)
 
     def forward(self, x):
+        # inherit doc
+
         x = self.conv_stack(x)
         x = self.out_conv(x)
         x = self.gap(x)[..., 0]
@@ -154,6 +169,8 @@ class RNN(FreddieModel):
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        # inherit doc
+
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.zero_pad = nn.ConstantPad1d((0, future_size), 0)
@@ -167,6 +184,8 @@ class RNN(FreddieModel):
         self.swap_out = Transpose(-1, -2)
 
     def forward(self, x):
+        # inherit doc
+
         x = self.zero_pad(x)
         x = self.swap_in(x)
         x = self.lstm_stack(x)
@@ -184,6 +203,8 @@ class CRNN(FreddieModel):
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        # inherit doc
+
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.conv_stack = ConvStack(in_size=num_channels,
@@ -206,6 +227,8 @@ class CRNN(FreddieModel):
         self.swap_out = Transpose(-1, -2)
 
     def forward(self, x):
+        # inherit doc
+
         x = self.conv_stack(x)
         x = self.zero_pad(x)
         x = self.swap_in(x)
@@ -223,6 +246,8 @@ class CANN(FreddieModel):
     """
 
     def __init__(self, num_channels, window_size, future_size, num_classes=5, **kwargs):
+        # inherit doc
+
         super().__init__(num_channels, window_size, future_size, num_classes)
 
         self.conv_stack = ConvStack(in_size=num_channels,
@@ -246,6 +271,8 @@ class CANN(FreddieModel):
         self.swap_out = Transpose(-1, -2)
 
     def forward(self, x):
+        # inherit doc
+
         x = self.conv_stack(x)
         x = self.zero_pad(x)
         x = self.swap_in(x)

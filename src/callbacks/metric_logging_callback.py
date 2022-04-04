@@ -10,6 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 import json
 
 from collections import defaultdict
@@ -35,17 +36,23 @@ class MetricLoggingCallback(Callback):
         self.metrics_history = defaultdict(list)
 
     def after_train_step(self, model, loss, metrics, epoch):
+        # inherit doc
+
         metrics = {key: val.tolist() for key, val in metrics.items()}
         self.metrics_history["train/loss"].append(loss)
         for key, val in metrics.items():
             self.metrics_history[key].append(val)
 
     def after_eval_step(self, model, loss, metrics, epoch):
+        # inherit doc
+
         metrics = {key: val.tolist() for key, val in metrics.items()}
         self.metrics_history["eval/loss"].append(loss)
         for key, val in metrics.items():
             self.metrics_history[key].append(val)
 
     def after_epoch(self, epoch: int):
+        # inherit doc
+
         with open(self.target_file, "w") as f:
             json.dump(self.metrics_history, f, indent=4)

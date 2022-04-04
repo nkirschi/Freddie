@@ -10,11 +10,12 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 import torch
 import wandb
 
-from learning.fitter import Callback
 from collections import defaultdict
+from learning.fitter import Callback
 from pathlib import Path
 
 
@@ -45,6 +46,8 @@ class WandBCallback(Callback):
         self.metrics_history = defaultdict(list)
 
     def after_train_step(self, model, loss, metrics, epoch):
+        # inherit doc
+
         metrics = {key: val.tolist() for key, val in metrics.items()}
         self._append_history(loss, metrics)
 
@@ -58,6 +61,8 @@ class WandBCallback(Callback):
         wandb.log(self._transform_metrics(metrics), step=epoch)
 
     def after_eval_step(self, model, loss, metrics, epoch):
+        # inherit doc
+
         metrics = {key: val.tolist() for key, val in metrics.items()}
         self._append_history(loss, metrics)
 
@@ -70,6 +75,8 @@ class WandBCallback(Callback):
         wandb.log(self._transform_metrics(metrics), step=epoch)
 
     def after_epoch(self, epoch: int):
+        # inherit doc
+
         wandb.log({})  # finally commit for this epoch
         wandb.summary[self.summary_metric] = self.max_metric
 

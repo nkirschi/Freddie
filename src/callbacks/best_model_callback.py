@@ -10,6 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 import torch
 
 from learning.fitter import Callback
@@ -34,6 +35,8 @@ class BestModelCallback(Callback):
         self.min_loss = float("inf")
 
     def after_eval_step(self, model, loss, metrics, epoch):
+        # inherit doc
+
         if loss < self.min_loss:
             self.min_loss = loss
             torch.save(model.state_dict(), self.target_file)

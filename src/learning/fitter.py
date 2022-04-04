@@ -10,6 +10,7 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
+
 import torch
 
 from torch.nn import Module, DataParallel
@@ -93,7 +94,7 @@ class Fitter:
 
         torch.cuda.empty_cache()
 
-    def __train_step(self, model: Module, dl_train: DataLoader, epoch: int):
+    def __train_step(self, model, dl_train, epoch):
         model = model.module if self.train_device.type == "cpu" else model
         self._ensure_device(model, self.train_device)
 
@@ -139,7 +140,7 @@ class Fitter:
             cb.after_train_step(self._unwrap(model), loss, metrics, epoch)
 
     @torch.no_grad()
-    def __eval_step(self, model: Module, dl_eval: DataLoader, epoch: int):
+    def __eval_step(self, model, dl_eval, epoch):
         model = model.module if self.eval_device.type == "cpu" else model
         self._ensure_device(model, self.eval_device)
 
@@ -204,7 +205,7 @@ class Callback(ABC):
     An abstract callback for 'Fitter' defining hooks for different execution points during training.
     """
 
-    def after_train_step(self, model: Module, loss: float, metrics: dict, epoch: int):
+    def after_train_step(self, model, loss, metrics, epoch):
         """
         Hook called after a training step.
 
@@ -221,7 +222,7 @@ class Callback(ABC):
         """
         pass
 
-    def after_eval_step(self, model: Module, loss: float, metrics: dict, epoch: int):
+    def after_eval_step(self, model, loss, metrics, epoch):
         """
         Hook called after an evaluation step.
 
@@ -238,7 +239,7 @@ class Callback(ABC):
         """
         pass
 
-    def after_epoch(self, epoch: int) -> bool:
+    def after_epoch(self, epoch):
         """
         Hook called after an entire epoch is finished.
 

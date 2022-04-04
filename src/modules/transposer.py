@@ -1,5 +1,5 @@
 """
-This file contains a custom PyTorch module frequently needed in model definitions.
+This file contains a custom PyTorch module for transposing tensor dimensions.
 """
 
 __author__ = "Nikolas Kirschstein"

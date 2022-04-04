@@ -10,15 +10,16 @@ __maintainer__ = "Nikolas Kirschstein"
 __email__ = "nikolas.kirschstein@gmail.com"
 __status__ = "Prototype"
 
-from utils import constants as c
-import torch
+
 import numpy as np
 import pandas as pd
-import utils.io as ioutils
 import random
+import torch
+import utils.io as ioutils
 
 from torch.utils.data import Dataset, Subset
 from tqdm import tqdm
+from utils import constants as c
 
 
 class MessengerDataset(Dataset):
@@ -159,6 +160,14 @@ class MessengerDataset(Dataset):
         return sample, label
 
     def explode_orbits(self):
+        """
+        Groups the samples by orbits and puts them into a dict.
+
+        Returns
+        -------
+        dict[int]
+            A dict containing for each orbit ID the subset of samples corresponding to that ID.
+        """
         orb_range = lambda orbit_idx: range(self.orbit_borders[orbit_idx], self.orbit_borders[orbit_idx + 1])
         return {orb[c.ORBIT_COL].iloc[0]: Subset(self, orb_range(i)) for i, orb in enumerate(self.orbits)}
 
