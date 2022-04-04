@@ -1,10 +1,10 @@
 # Freddie
 
-This is the code repository accompanying the Bachelor's thesis of _Nikolas Kirschstein_.
+This is the code repository accompanying the paper
 
-> Deep Active Learning with Artificial Neural Networks for Automatic Detection of Mercury’s Bow Shock and Magnetopause Crossing Signatures in NASA’s MESSENGER Magnetometer Observations
+> Deep Active Learning for Automatic Detection of Mercury’s Bow Shock and Magnetopause Crossing Signatures using MESSENGER Magnetometer Observations
 
-We are currently turning my thesis into a journal paper. The final version of the source code will be available on _Zenodo_ as part of the publication.
+TODO: bibtex snippet
 
 ## Installation
 
@@ -20,9 +20,9 @@ in the repository's root directory. While the development mode `-e` is not stric
 
 The project's three main scripts are located in the `src/` directory:
 
-- `preprocessing.py`: Data preprocessing as described in the thesis.
+- `preprocessing.py`: Data preprocessing as described in the paper.
 - `ordinary_training.py`: Standard passive training procedure.
-- `active_learning.py`: Implementation of the active learning algorithm devised in the thesis.
+- `active_learning.py`: Implementation of the active learning algorithm devised in the paper.
 
 ## Configuration
 
@@ -33,7 +33,7 @@ The `config/` directory holds the configuration files to parametrize the trainin
 
 ## Inference Plots
 
-As mentioned in the thesis, the plots for model inference on the entire test set reside in this repository under the `inference_plots/` folder.
+As mentioned in the paper, the plots for model inference on the entire test set reside in this repository under the `inference_plots/` folder.
 
 - `inference_plots/groundtruth/` contains the ground-truth orbit annotations.
 - `inference_plots/prediction/` contains the orbit-scaled model predictions.
@@ -99,9 +99,9 @@ The entire project folder structure is outlined below:
 │   │   ├── io.py                         # I/O related helper functions
 │   │   ├── timer.py                      # context manager for timing source code execution
 │   │   └── torchutils.py                 # handy abbreviations for common PyTorch workflows
-│   ├── active_learning.py                # active learning algorithm from the thesis
+│   ├── active_learning.py                # active learning algorithm from the paper
 │   ├── ordinary_training.py              # standard passive learning procedure
-│   └── preprocessing.py                  # data preprocessing as described in the thesis
+│   └── preprocessing.py                  # data preprocessing as described in the paper
 ├── .gitignore                            # files to exclude from git tracking
 ├── LICENSE.txt                           # the full license which this project employs
 ├── README.md                             # this README file :)
