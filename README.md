@@ -2,9 +2,9 @@
 
 This is the code repository accompanying the paper
 
-> Deep Active Learning for Automatic Detection of Mercury’s Bow Shock and Magnetopause Crossing Signatures using MESSENGER Magnetometer Observations
+> Deep Active Learning for Detection of Mercury’s Bow Shock and Magnetopause Crossings
 
-TODO: bibtex snippet
+TODO: bibtex snippet once published
 
 ## Installation
 
