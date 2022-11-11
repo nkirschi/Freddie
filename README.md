@@ -1,10 +1,19 @@
 # Freddie
 
-This is the code repository accompanying the paper
+This is the code repository for the ECML paper *[Deep Active Learning for Detection of Mercury’s Bow Shock and Magnetopause Crossings](https://2022.ecmlpkdd.org/wp-content/uploads/2022/09/sub_1177.pdf)*.
 
-> Deep Active Learning for Detection of Mercury’s Bow Shock and Magnetopause Crossings
+## Cite
 
-TODO: bibtex snippet once published
+If you use the code or models in this repository for your research, please cite our paper:
+
+```
+@inproceedings{julka_deep_active_learning_mercury_2022,
+  title = {Deep Active Learning for Detection of Mercury’s Bow Shock and Magnetopause Crossings},
+  author = {Julka, Sahib and Kirschstein, Nikolas and Granitzer, Michael and Lavrukhin, Alexander and Amerstorfer, Ute},
+  booktitle = {European Conference on Machine Learning and Principles and Practice of Knowledge Discovery in Databases (ECML PKDD)},
+  year = {2022}
+}
+```
 
 ## Installation
 
