@@ -1,6 +1,6 @@
 # Freddie
 
-This is the code repository for the ECML paper *[Deep Active Learning for Detection of Mercury’s Bow Shock and Magnetopause Crossings](https://2022.ecmlpkdd.org/wp-content/uploads/2022/09/sub_1177.pdf)*.
+This is the code repository for the ECML paper *[Deep Active Learning for Detection of Mercury’s Bow Shock and Magnetopause Crossings](https://doi.org/10.1007/978-3-031-26412-2_28)*.
 
 ## Cite
 
